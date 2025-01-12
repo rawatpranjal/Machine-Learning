@@ -1,0 +1,4346 @@
+beeen
+
+rere aera
+
+tec
+
+ane
+
+ud
+
+PARTICIPANT'S MANUAL
+FOR
+A DOUBLE AUCTION TOURNAMENT
+
+Richard G. Palmer
+John Rust
+John Miller
+
+Santa Fe Institute
+1120 Canyon Road
+Santa Fe, NM 87501
+
+Abstract
+
+This manual describes the Double Auction Tournament being run by the Santa Fe Institute in
+Marclr 1990. It explains the Double Auction, the tournament, and all the associated software and.
+protocols. Instructions are given for preparing @ strategy-playing program to participate in the
+tournament.
+
+Table of Contents
+
+Chapter Contents Filename Page
+1. Introduction intro 2
+2. The Software software 122
+3. The Skeleton Programs ’ skeleton 26
+4, The Monitor monitor 35
+3. The Player Programs players 44
+6. . DANI dani 51
+7. Tournament Rules and Entry Form rules 57
+3. The Message Passing Protocol messages 63
+9, References . tefg 79
+
+The documentation is all available electronically, either by anonymous ftp from sfi.santafe.edu
+(directory pub/dat/doc) or on PC floppy disks; the appropriate file names are listed above.
+
+Acknowledgements
+
+We thank all participants in the Economics Program of the Santa Fe Institute for discussions and,
+in many cases, for being guinea pigs as the Double Auction game developed. We are also very
+grateful to Robert Axelrod, Robert Dorsey, Stephanie Forrest, Charles Plott, Vernon Smith, and
+Shyam Sunder for helpful comments and suggestions. We thank Citicorp, the Russell-Sage
+Foundation, IBM, and the Alfred P. Sloan foundation for financial support. We are also grateful
+for the superb administrative assistance provided by the Santa Fe Institute, in particular help from
+Michael Angerman, Ronda Butler-Villa, Shona Holmes, Stephen Pope, Ginger Richardson, Mike
+Simmons, Andi Sutherland, and Della Ulibarri.
+CHAPTER 1: INTRODUCTION
+
+This chapter describes the Double Auction (DA), including the specific conventions of the Santa Fe
+Institute's implementation. It provides an example of part of a game, raisin g some of the strategy
+issues. It also gives a broad overview of how the computerized tournament works, and a guide to
+the rest of the documentation.
+
+Background
+
+The Double Auction (DA) is a type of trading institution used by the New York Stock Exchange,
+the Chicago Board of Options Exchange, and many other securities and commodity exchanges
+throughout the world. In the DA, buyers and sellers are simultaneously able to call out "bids"
+(offers to buy) and "offers" (offers to sell), or to accept the lowest outstanding offer or highest
+outstanding bid at any point in the trading process. The rapid flow of information combined with
+the ability of traders to undercut instantly any outstanding bid or offer makes the DA perhaps the
+closest embodiment of the economist's notion of a perfect frictionless market. The efficiency
+properties of these markets are legendary and have been extensively studied in laboratory
+experiments using human subjects (see surveys by Plott, 1982 and Smith, 1982a),
+
+In order to gain a deeper understanding of strategic choice in the DA, the Santa Fe Institute is
+sponsoring a computerized DA tournament. One goal of this tournament is to analyze the game
+when played by computerized trading strategies. To date, formal game-theoretic analysis of the
+dynamic DA game has not been forthcoming due to its inherent complexity. Thus insights gained
+into the nature of the decision processes actually employed in such situations could ultimately
+prove useful for improving our understanding of certain market phenomena such as the stock
+market crash in Fall 1987. Recent interest on Wail Street about the impact of computerized tradin g
+programs on market stability makes this analysis particularly timely. a
+
+The inspiration for a computerized DA comes in part from Axelrod’s (1984) "prisoner's dilemma"
+tournament. By allowing alternative algorithms to compete against one another, we can generate
+an easily controlled experimental environment. Within this environment, a variety of experiments
+can be performed on the submitted algorithms. This will allow us to evaluate carefully the
+important elements of each strategy, and to develop new insights into the game. A Priori it is
+difficult to predict which strategies will perform well. Will complex strategies be more effective
+than simple ones? Can information about one's opponents be productively exploited? Are there
+strategies which can perform well in a variety of environments (for example, large versus small
+markets)? How will the strategies perform against human traders? Can the behavior of the
+computerized strategies be easily distinguished from human players? How well will the
+computerized double auction market operate? Will it result in highly efficient allocations as is
+observed in human DA markets? Will the market quickly stabilize at the competitive equilibrium
+
+allocations, or will instabilities such as market bubbles and crashes arise?
+
+To provide strong incentives for the submission of well developed strategies, prize money in the
+amount of $10,000 will be distributed among the participants. Payments will be proportional to
+the trading profits earned by the participant's strategy in the tournament. Algorithms are being
+solicited from individuals with a variety of backgrounds including business school students,
+computer scientists, economists, game theorists, learning theory specialists, and possibly even
+traders from real exchanges such as the New York Stock Exchange and the Chicago Board of
+Trade. It is our hope that these algorithms will embody a variety of strategic approaches, from
+simple, intuitive "rules-of-thumb" to sophisticated programs utilizing complex statistical, adaptive,
+and learning algorithms.
+
+Double Auction Tournament -2- Participant's Manual
+const
+
+uh
+
+The idea of running a Double Auction Tournament originated in the March, 1988 meeting of the
+Economy Program of the Santa Fe Institute. The original protocol was designed by Richard Palmer
+and John Rust. The experimental design of the tournament was developed jointly by John Miller,
+Palmer and Rust, with comments from Robert Axelrod, Charles Plott, Vernon Smith, and Shyam
+Sunder. A prototype version of the DA software was written in the Gauss programming language
+(for IBM PC's) by Rust in December, 1988. The software design is due Palmer and Miller. The
+tournament software was written by Palmer (monitor, DANI, C and Fortran players) and Miller
+(Pascal players), with assistance and advice from Rust, Stephen Pope, and Michael Angerman.
+George Tsibouris and Palmer wrote the PC graphics routines using Turbo-C. The documentation
+was written by Palmer, with assistance from Miller and Rust.
+
+41.2 The Computerized Double Auction
+
+The structure of our computerized DA game is very similar, but not identical, to the version of the
+DA used in laboratory experiments. The main differences are (1) time is divided into discrete bid-
+offer and buy-sell steps, and (2) the adoption of Chicago rules, i.e. that only the current bidder and
+current offerer can accept the current offer and bid, respectively (these concepts are defined
+below). The time discretization was adopted to simplify the synchronization of communications in
+a multi-processing or network environment with delays that may vary from player to player or
+moment to moment. Chicago Rules were chosen to make our implementation of the DA resemble
+the new AURORA computerized DA market created by the Chicago Board of Trade. Having
+experimented with alternative sets of trading rules, we found that.the Chicago Rules produce a
+"fairer," more strategically interesting version of DA without much random tie-breaking.
+
+The rest of this section describes the rules for our game:
+
+1. Hach player.in a game is either a buyer or seller of tokens. Players can specify which roles
+they are willing to play. They are all informed as to how many buyers and sellers there are in
+the game, In the tournament a program that can play both roles will play more games, and
+hence have more opportunity for profit, than one that can play only one role.
+
+2, A game is divided into-one or more rounds.
+3. Hach round is divided into one or more periods.
+
+4, Jn each period, each buyer can buy up to N tokens and each seller can sell up to N tokens. A
+TOKEN can be thought of as a fictitious commodity that is being traded in the DA market.
+For simplicity, N is the same for all players and all periods in a game, and is between 1 and
+4, inclusive.
+
+5. For each round, each buyer is assigned N redemption values, one for each token that could
+be bought. If the i'th token bought by a given buyer in a given period has redemption value
+R(i), and is bought at a price P(i), then that buyer makes profit R(i}—PG) from the
+transaction. Thus buyers try to buy tokens as cheaply as possible below their redemption
+values. Redemption values are given in decreasing order, and are assumed to be used in that
+order since it maximizes profit.
+
+6. For each round, each seller is assigned N token costs, one for each token that could be sold.
+If the i'th token sold by a given seller in a given period has token cost C(i), and is sold at a
+price P(i), then that seller makes profit P(i}—C(i) from the transaction. Thus sellers try sell
+tokens for as much as possible above their token costs. Token costs are given in increasing
+order, and are assumed to be used in that order since it maximizes profit.
+
+Double Auction Tournament -3- Participant's Manual
+10.
+
+il.
+
+12.
+
+13,
+
+14.
+
+15.
+
+16.
+
+17.
+
+18,
+
+19.
+
+Redemption values and token costs in general are different for each player, and are private
+information not communicated to other players. ;
+
+Note that redemption values and token costs are the same for each period within a round, but
+in general differ from round to round. During a given round, strategies may be able to benefit
+from information gathered about opponents’ redemption values or token costs in previous
+periods,
+
+Each period consists of a number of alternating bid-offer steps and buy-sell! steps, starting
+with a bid-offer step.
+
+In a bid-offer step cach buyer who has not already bought N tokens in that period may make
+a bid to buy one token. The buyer specifies the price of the bid; prices must be integers. If
+there is alréady a current bid (see below) the price must be higher than the current bid price.
+
+In a bid-offer step each seller who has not already sold N tokens in that period may make an
+offer to sell one token. The seller specifies the price of the offer; prices must be integers. If
+there is already a current offer (see below) the price must be lower than the current offer
+price. :
+
+At the conclusion of a bid-offer step, the highest bid made becomés the current bid, and the
+lowest offer made becomes the current offer. If no new bids were made the previous current
+bid remains if there was one; otherwise there is no current bid. Similarly for offers. Any ties
+for highest bid or lowest offer are broken randomly.
+
+All players are informed about all legal bids and offers, and who made them, at the
+conclusion of each bid-offer step. At all times they know the current bid and offer Gf any),
+and who holds them—-the current bidder and current offerer.
+
+In a buy-sell step, one or more buyers may ask to accept the current offer; this is a buy
+request (see also rule 15). Similarly one or more sellers may ask to accept the current bid;
+this is a sell request (see also rule 16), If more than one request occurs, one is selected
+randomly; only one transaction (either a buy or a sell) can occur in each buy-sell step.
+
+If there is a current bid, then only the current bidder is eligible to make a buy request. If
+there is no current bid, then any buyer who has not already bought N tokens in this period
+may make a buy request.
+
+If there is a current offer, then only the current offerer is eligible to make a sell request. If
+there is no current offer, then any seller who has not already sold N tokens in this period may
+make a sell request.
+
+When a transaction occurs the transaction price is equal to either the current offer (if a buy
+request was accepted), or to the current bid (if a sell request was accepted). Both the buyer
+and seller involved receive profit as described above (see rules 5 and 6), and consume one of
+their N tokens.
+
+All players are informed about all transactions that occur. The information consists of the
+transaction price, the identity of the buyer and seller involved, and whether it was a buy or a
+sell request that was accepted. They are not informed about other buy or sel! requests that
+were not accepted.
+
+If a transaction occurs in a buy-sell step, then both the current bid and the current offer are
+cleared before the next bid-offer step. Otherwise they are retained,
+
+Double Auction Tournament -4- Participant's Manual
+sl
+
+a
+
+1.3 An Example
+
+A simple example will serve to clarify the above definition of the game, and to raise some of the
+strategy issues.
+
+We focus on a single seller $1 in a game with three buyers (B1, B2, and B3) and three sellers (S1,
+§2, and $3). We consider only the first few steps of one period of the game. -Our seller S1 was
+assigned four tokens with the following token costs for the round we are examining:
+
+100 200 300 400
+
+The first few steps are shown in the following table, in a format based on the monitor's listfile
+display (see the "monitor" chapter of the documentation for full details), constituting the
+information available to $1. The left-hand columns show the time and step type (BO = bid-offer,
+BS = buy-sell). The right-hand columns show the current bid and current offer after each step,
+and the price of each transaction that occurs. The participants in a transaction are shown by >'s
+(for a sell) or <'s (for a buy). _
+
+t Bi B2  B3 Sit. s2  §3 bid coff price
+
+1 BO 50 75* 60 410* 500 450 75 410
+BS 75 410
+
+2 BO 100 85 130* } 350 330* 400 130. 330
+
+_ BS oS 130° 330
+
+3 BO 150 140 1754 250* 275 320 175 250
+BS > > 175
+
+4 BO sox 80 60 400 405 - 250* 80 250
+BS 80 250
+
+5 BO 125¥ 100 110 225* 230 240 125 225
+BS 125 225
+
+6 BO 150 180* 215 200% 215 180 200
+BS < < 200
+
+BID-OFFER STEP 1:
+
+The period begins, and our seller is called on to make an offer. She has no information about the
+other players, and can only judge an appropriate offer value by looking at her own token costs
+(100, 200, 300, 400). She could do nothing, and see what the others do, but she decides to make
+an Offer of 410. If accepted this would yield her a profit of 410 - 100 = 310,
+
+Her offer turns out to be the lowest among the three sellers (see the table) and so becomes the
+cutrent offer. On the buyer's side the highest bid was 75, which thus becomes the current bid.
+The current bid and current offer are marked by asterisks (*) in the table.
+
+BUY-SELL STEP 1:
+
+Because she is the current offerer, our seller is now eligible to make a sell request, to sell her first
+token to the current bidder (B2) at the current bid price of 75. But that would be foolish; she
+would make a loss of 25. So she does nothing.
+
+The current bidder also has the option of making a buy request, to buy a token from our seller at
+
+her current offer price of 410. She'd be happy if he did so (giving her 310 in profit), but he
+doesn't.
+
+Double Auction Tournament -5- Participant's Manual
+This illustrates a general feature of the buy-sell step. It can be thought of as a two-person game
+between the current bidder and the current offerer, and each hopes that the other will accept.
+Besides locking in a profit, the incentive to make a buy or sell request oneself is mainly not to have
+to play another bid-offer step, with the consequent risk of losing the bidding or offering lead.
+There may also be an incentive to make a trade before time runs out towards the end of a period.
+
+BID-OFFER STEP 2
+
+Given that her outstanding current offer of 410 was not accepted, our seller decides to lower her
+offer to 350. Here she must strike a balance between going too low, and thus losing potential
+profit, and not going low enough to win the current offer. Ideally she would guess the best offer
+of the other sellers, and then go just below it (assuming she could still make a profit). As it is, she
+doesn't go low enough; seller $2 beats her with an offer of 330. The current bid for the buyers
+increases to 130.
+
+The bid-offer step can be thought of as an n-person game between the n buyers, and an m-person
+game between the m sellers. Actually it may not always be advantageous to win the bidding. One
+strategy is to "hang behind" the leaders until a transaction seems imminent, and then to jump in just
+ahead of the competition. But this requires good knowledge of the others’ probable behavior.
+
+BUY-SELL STEP 2
+
+Again no transaction occurs. In fact this is the normal state of affairs; there are typically far more
+steps in a period than there are tokens to be traded, so transactions occur relatively infrequently.
+One strategy is to make a buy or sell request as soon as a "reasonable" profit can be made, before
+"all the best buys are gone." Though this may give early profit in a game, it does not necessarily
+make the most profit; holding out for a better price may do better.
+
+BID-OFFER STEP 3
+Our seller goes down to 250 and again gets the lead. Meanwhile the buyers come up to 175.
+BUY-SELL STEP 3
+
+Our seller again has a chance to request a sell, and this time she chooses to do so. Itis accepted
+and she has made a_profit of 175—100 = 75. ue ,
+
+We don't know whether the current bidder B3 made a simultaneous buy request; if he did there
+was a random draw, which $1 must have,"won." This is arandom draw it is not good to win; if
+B3 had won the draw the transaction price would have been 250 instead of 175, actually doubling
+our seller's profit.
+
+BID-OFFER STEP 4
+
+Because a transaction occurred, the current bid and offer have been removed (see the right-hand
+columns). So now $1 can make any bid she likes. One strategy here is to jump close to the
+previous transaction price; another is to start far away and work slowly back towards it. The latter
+gives more information, and is perhaps more likely to convince the buyers to accept a higher price,
+but is thwarted by just one seller employing the "let's get right back near the last price" approach.
+
+Our seller decides to make a high offer of 400. But $3 jumps in with a much lower offer, at 250,
+Note that on the buyer's side there was a tie for the current bid, and B1 was randomly chosen,
+
+Double Auction Tournament -6- Participant's Manual
+
+anemia
+BUY-SELL STEP 4
+No transaction occurs.
+BID-OFFER STEP 5
+
+Our seller now has a rather limited range in which to make a new offer; she must go below the
+current offer of 250, but obviously wants to stay above ber next token cost of 200 (recall that she
+sold her first token, and is now onto her second). She splits the difference at 225, and wins the
+current bid.
+
+BUY-SELL STEP 5
+
+No transaction occurs, Our seller is eligible to accept the current bid of 125, but would make a
+loss if she did so.
+
+BID-OFFER STEP 6
+
+$1 is pinned between 200 and 225, She tries 215, but is beaten by $2 at 200. Note that now there
+is nothing she can do until after a transaction occurs; the current offer is too low for her to beat
+with any hope of profit. Notice that B2 didn't make a bid on this step. This may signify that he
+cannot do so profitably, but may also represent a wait-and-see approach. It could also be that he
+didn't respond in time or encountered an error, Watching where other players stop bidding or
+offering often gives valuable information, but must be interpreted carefully. Bluffing (by sticking
+at one price, even though it may not be close to the token value) is certainly possible.
+
+BUY-SELL STEP 6
+
+B3 accepts $2's offer and a second transaction occurs. There was a range of only 20 points
+between the current bid and offer at this point, Patient players might have continued for several
+inore steps, with the prices edging together, before concluding a transaction. As the prices come
+together, either player can gain more profit by accepting, but both risk losing the bidding/offering
+lead to other players. ;
+
+We leave the detailed example at this point. Several more transactions would probably occur
+during this period, Then the next period would begin, with everyone having the same token
+values. In this new period our seller might base her offers and sell requests on information gained
+in the previous period. She might also want to use some of the information she ignored during the
+first period, including the actual bids and offers (whether accepted or not) made by each of her
+opponents during the actual play, the transaction prices for the trades that did occur, and so on.
+She might also be able to develop a sense of how her opponents are likely to respond (such as the
+observation that $3 always seems to offer 10 points below the previous current offer value when
+there was one), This sort of information might even be useful in another round, where the
+opponents are the same even though the token values are different.
+
+One of the best ways to understand the rules of the game, as well as to gain insights into potential
+strategies, is to actually play some games against a set of sample strategies. This can be done
+either on the Santa Fe Token Exchange or entirely on a local computer, as described below and in
+the rest of the documentation.
+
+Double Auction Tournament “Te Participant's Manual
+1.4 Implementation of the Computerized Double Auction
+
+The Santa Fe Institute's implementation of a computerized double auction is based on two
+principles:
+
+1. The players in @ game are represented by separate independent programs. This allows easy
+development of players in a diverse set of languages on a variety of machines, and makes it
+easy to Construct games between selected subsets of available players.
+
+2. Participants developing strategies only need to understand and work with programming
+details related to strategy, not with control, communications, book-keeping, synchronization,
+etc. (This is almost but not quite true.)
+
+Principle (1) is realized by having a separate Monitor Program that manages the game. The
+players and the monitor are all separate programs. The monitor is NOT an auctioneer; it only
+serves to coordinate message-passing between the separate player programs. Thus, all programs
+communicate only with the monitor, but not directly with each other. There are various
+communication methods that can be used, though not all are available on all systems; these are
+discussed in detail in Chapter 2, Software. ;
+
+Depending on the system, the monitor and players may all be on the same machine, or may be
+distributed on.a network. At present networking is possible only for TCP/IP communications on
+the Internet network. Local players (on the same CPU as the monitor) are normally started up and
+controlled by the monitor, according to a list in the "players file." Network players are started up
+separately after the monitor is running, and then connect to the monitor.
+
+A networking monitor ronning regularly at Santa Fe (every hour on the hour) forms the Santa Fe
+
+Token Exchange (SFTE). Participants with TCP/IP access to the Internet can play practice games:
+
+with the SFTE across the network, Results are mailed back to them automatically. But even if they
+can use the SFTE, most participants will want to set up a monitor running on their own computer
+too. Principle (2) is realized by the provision of "skeleton" player programs in C, Fortran, and
+Pascal, These programs will run as they are, playing the Double Auction according to a simple
+strategy. The strategic parts of these programs are well separated from the control and
+communications parts, so that participants can easily identify the routines they need to modify to
+
+implement their own strategy. They should not need to understand the control and
+
+communications parts at all.
+
+In all three languages a standard set of variables specifies the state of the game, and standard
+routines are called to request strategic decisions. For example, in a program playing a buyer, a
+routine called. "bid" is calléd in each bid-offer step and must return the value of the bid to be made
+(or 0 for none). Within the "bid" routine the current status of the game, and some cumulated
+history, is available for reference in making the decision. Chapter 3, The Skeleton Programs,
+
+describes the variables and routines in detail.
+
+The initial stages of setting up the Double Auction on a new machine may take a litrle time, and
+might in some cases require help from the organizers. But once a monitor and the skeleton
+programs are running, actual development of a Strategy should be simple (at least from a
+programming standpoint) and can entirely ignore all the communication and control issues.
+
+A special player program called the "human player" provides an interface so that participants can
+
+themselves play a game against computer players. This may be done both on the SFTE and with a
+monitor running locally.
+
+Double Auction Tournament -8- Parlicipant's Manual
+5
+
+fun ee
+etd
+
+ed
+
+The monitot, skeleton players, and associated support software have been tested and debu geed on
+a variety of machines and systems including:
+
+Unix systems (BSD and System Y)
+IBM PC's and compatibles
+Vax/VMS
+
+Cray/Unicos
+
+The organizers will advise on porting the software to further systems, and will help with it when
+appropriate. Note that porting to a Macintosh is NOT possible, due to operating system
+limitations.
+
+All the software is available from the Santa Fe Institute, via electronic file transfer (anonymous ftp
+or electronic mail), or on floppy disks. Chapter 2, The Software, gives detailed instructions for
+obtaining it. Knowledgeable ftp users can look directly in pub/dat by anonymous ftp at
+sfi.santafe.edu; the README file contains a description of the files.
+
+The documentation itself is also available in electronic form, or can be obtained in printed form
+from Santa Fe. A small charge is made for sending disks or printed documentation from Santa Fe.
+The software itself is free except for that required to set up a networking monitor other than the
+SFTE; this is not normally distributed (in part to encourage use of a single network token
+exchange), but may be sold and licensed on request.
+
+The actual tournaments will be conducted at Santa Fe, not over the network, Participants will
+submit the source of their player programs, or at least the strategic subroutines from those
+programs. The "rules" chapter of the documentation contains details.
+
+1.5 Electronic Mailing List
+An automatic electronic mailing list is maintained at the Santa Fe Institute for discussions and
+announcements relating to the Double Auction Tournament. You will be added to the list when you
+make an initial enquiry about the project, or if you ask specifically to be added. .
+All mail sent to the e-mail address
+
+dat-list@sfi.santafe.edu
+
+will be sent on automatically to everyone on the mailing list, The list is unmediated, so please be
+polite, concise, and considerate. The DAT organizers are themselves on the list and will respond
+as appropriate to queries mailed to the list. Individual queries not of general interest should be
+mailed to dat, not to dat-list.
+
+For additions, deletions, and changes to the list, please send mail to
+
+dat@sfi.santafe.edu
+or dat-list-request @sfi.santafe.edu
+
+but NOT to the list itself.
+Ali correspondence sent to the mailing list is appended to the file "mail" in the pub/dat directory
+
+accessible by anonymous ftp at sfisantafe.edu. See Chapter 2 (software) for more information
+about ftp. .
+
+Double Auction Tournament -9- Participant's Manual
+1.6 Documentation
+
+The documentation for the Double Auction Tournament is divided into a number of different
+chapters. You will not necessarily. need all of these. The name shown in parentheses after each
+heading below is the file name for that chapter in the electronic form of the documentation.
+
+Q. Title Page (title)
+0.1 Title
+0.2 - Authors
+0.3 Abstract
+0.4 Table of Contents
+
+0.5 Acknowledgements.
+1, Introduction (intro) [This chapter]
+
+1.1 Background
+
+1.2 The Computerized Double Auction—Game rules
+1.3 An Example, with comments on strategy
+
+1.4 Outline of software implementation
+
+1.5 Electronic Mailing List
+
+1.6 Documentation summary.
+
+2. Software = _- (software)
+
+2,1 Communication methods
+
+2.2 Outline of available software
+
+2.3 Obtaining the software and documentation
+2.4 Getting started - ,
+2.5
+
+. Getting help
+3. Skeleton Programs (skeleton)
+3.1 Introduction .
+3.2 Variables in the user routines
+3.3 Working variables
+3.4
+
+Return values —
+4. The monitor : (monitor)
+
+41 Starting the monitor
+
+4.2 Runtime commands
+
+43 Vax/VMS notes
+
+4.4 Explanation of listfile output f
+4.5 Explanation of logfile output
+
+5. The player programs (players)
+3,1 Starting the player programs
+5.2 Explanation of human player and C-player output
+5.3 Prompts and responses in the human player
+5.4 History display in the human player
+
+Double Auction Tournament -10- Participant's Manual
+
+a
+DANI (dani) [see Note 1]
+
+6.1 Communication methods
+
+6.2 Starting DANI
+
+6.3 Vax/VMS notes
+
+6.4 Explanation of display output
+Tournament rules (rules)
+7.1 Rules for entries
+
+7.2 Registration form
+
+Message passing protocol (messages) [see Note 2]
+Messages and message packets
+
+Order of packets -
+
+Individual Steps of DA game
+
+Special messages
+
+Summary
+
+Code table
+
+oo oo 00 GO OO 00
+AAR WHR
+
+References ; (refs)
+
+9.1 References -
+
+The text of the poster is also available, in file ‘poster’. Permission is hereby granted to post this
+poster, without substantive change, to any bulletin board or news group.
+
+Note 1: The description of DANI in chapter 6 is otily needed] if you want to use a language other
+‘than C and use the SFTE via ‘the Internet,
+
+Note 2: Chapter 8 is a technical document on the messages passed between monitor and players.
+It is NOT needed for ordinary participants who base their players on the skeleton
+
+id
+
+programs.
+
+Double Auction Tournament
+
+-11-
+
+Participant's
+
+Manual
+CHAPTER 2: THE SOFTWARE
+
+This chapter describes the software available. It also explains how to obtain the software and
+documentation that you need, and how to start setting it up on your own machine. There are many
+details in this chapter, but probably only part of it will apply to you.
+
+2,1 Communication Methods
+
+The first key to understanding the software is a knowledge of the communication methods that can
+be used between the monitor and the players.
+
+Note that in all games there is one monitor and at least two separate players. The monitor and each
+of the players is a complete program in itself; the players are NOT "subroutines" of the monitor.
+The monitor program and the player programs may run simultaneously (either on the same
+computer or on different ones connected by the Internet), or one at a time. The players each
+communicate only with the monitor, not directly with each other.
+
+The different communication methods are described below. In each case we shew only one player
+communicating with the monitor, but in a real game there would be more. The monitor can
+support any mixture of communication methods that are available on the computer concerned,
+
+Certain facilities are only available to player programs based on the skeleton programs written in
+C. Such programs are referred to as "C players" below, and include the human interface.
+
+FILE-BASED COMMUNICATION
+
+This is the slowest communication scheme but is available on all supported systems. It is the
+ONLY communication method available on an IBM-PC, or on any other machine that can only run
+one program atatime. Suppose the the player program is called PLAYER. Then the following
+sequence occurs for each step of the game:
+
+‘a
+
+MONITOR ———_——— PLAYER.IN
+
+'
+
+PLAYER ~<4—p PLAYERSAV
+
+'
+
+MONTTOR <————- PLAYER.OUT
+
+The monitor writes file PLAYER.IN and then starts up the PLAYER, which reads it. The player
+writes file PLAYER.OUT, which is then read by the monitor. The monitor itself is suspended
+while the PLAYER is running, The PLAYER is started up separately for each step of the game,
+and exits after writing PLAYER.OUT. Because the PLAYER is not running continuously it must
+
+Double Auction Tournament -12- : Participant's Manual
+ok
+
+asa
+
+fee,
+
+ted
+
+save its working variables, either in a file called PLAYER.SAV as shown, or (C players only) in
+PLAYER.OUT following the output messages,
+
+This communication method is obviously very disk intensive, and also involves many program
+launches, It is not recommended when other methods are available, On an IBM-PC it can actually
+be made fairly fast by placing the player programs (and thus their .IN, OUT, and SAV files) on
+4 RAM disk. See the instructions below. Ona Vax/VMS system it is extremely slow.
+
+PIPE-BASED COMMUNICATION
+This is the recommended communication method for use between the monitor and each player
+
+when on the same multiprocessing machine. The monitor and players all run simultaneously, and
+communicate via "pipes" (or their equivalent, e.g., "mailboxes" in VMS):
+
+— (stdin)
+
+<4 (stdout) PLAYER
+
+MONITOR
+
+There is one pipe for each direction. At the player's end these pipes are arranged to look like the
+standard input and output channels, which would normally be attached to the terminal, Thus the
+player program can use simple read and write operations without any special knowledge of pipes.
+
+The monitor program is started up first and then starts up all the pipe-based_ player. programs.
+They are technically "child processes" (Unix) or “sub-processes" (VMS) of the monitor's own
+process. The players keep running until the end of the game or an error; for most errors detected
+by the monitor the offending player will be "Idle."
+
+There is a modified form of pipe-based communication available only for the C players and the
+
+human player. The player uses special channels ("descriptors") for the pipes, leaving its standard
+
+input and output free for terminal communication. This is essential for the human player. This
+form of communication is called "arg-based communication” because the descriptor numbers are
+
+passed via command-line arguments from the monitor-to the player when the player is started.
+INTERNET-BASED COMMUNICATION—DIRECT
+
+Direct Internet communication is available only for the C players and the human player. It allows
+such players to connect to the monitor over a TCP/IP Internet communication link:
+
+MONITOR << intemet ——> PLAYER
+
+t
+
+display
+
+The monitor and player programs are usually on different machines at different locations. The
+monitor is normally the one at sfi.santafe.edu, called the Santa Fe Token Exchange (SFTE).
+The monitor runs at a pre-arranged time (every hour on the hour for the SFTE) and users start up
+their players at the appropriate time at the remote sites. The player program itself establishes the
+connection to the monitor. The player program can display the progress of the game to the screen
+
+(or to a file) during the game.
+
+Double Auction Tournament -13- Participant's Manual
+INTERNET-BASED COMMUNICATION—VIA DANI _
+
+The direct Internet-based method described above is only available for the C players and human
+player. For other languages the Double Auction Network Interface (DAND) must be used:
+
+MONITOR <4— intemet —p» | DANI | «—» PLAYER
+
+'
+
+display
+
+DANI acts as a relay for messages between the player and the Internet. It can also display the
+progress of the game as itruns. DANI and the player can communicate by any_of the non-Internet
+methods described above (file- based, pipe-based, or arg-based). The monitor is started first (at a
+prearranged time), and then DANT is started at the remote site. DANI then starts the local player.
+DANI can only support one player at a time. ; 7
+
+DANI. can also communicate with the player by some additional methods not discussed here.
+
+Please contact the organizers if you have a special need not covered by the cases presented here.
+
+Using DANI may sometimes be preferred over the direct Internet method even for C players, |
+
+because DANI's display format is more compact than the C player's (which is designed primarily
+for.the human player). we .
+
+2.2 Outline of the Software Available
+The software available for the Double Auction Tournament consists of the following major parts:
+
+1. The monitor. This is needed if you want to run double auction games on your local machine
+or network. Without it you can only play games on the Santa Fe Token Exchange (SFTE),
+via the Internet. This is available both in C source form and in IBM-PC executable form.
+
+2. The skeleton players. You will certainly need one of these, in source form; if you plan to
+develop your own strategy (without it you can only play via the human interface on the
+SFTE, and cannot enter th tournament), They are available in the following languages:
+
+C for Unix, Vax/VMS, Unicos, Turbo-C, Quick-C Fortran for Unix, Vax/VMS,
+Unicos, MS-Fortran, RyanMcFarland, Lahey Pascal for Unix; Vax/VMS, Turbo-
+Pascal.
+
+Using another language (e.g., Lisp, Ada, Basic) is possible for games on the SFTE
+(via DANI), but is not acceptable for tournament entries except by prior arrangement
+with the organizers.
+
+Using one of the above languages on a different system or compiler will not be difficult
+in most cases, though some features may be lacking. Contact the organizers for advice.
+
+3. The human interface. This allows you to play against computer strategies, either with your
+Jocal monitor or on the SFTE. The human player is available in C source form and in IBM-
+PC executable form. The C source actually shares much of the code of the C skeleton player
+and is packaged with it.
+
+Double Auction Tournament -14- Participant's Manual
+“etal
+
+4. DANI: the Double Auction Network Interface. This is needed if you want to play on the
+SFTE using a player program based on the Fortran or Pascal skeleton players (or anything
+else but C). It may also be useful even with the C players because its output display is
+compact. DANT is available in C source form only.
+
+5. PP: the simple pre-processor. This is a program that processes another program performing
+file inclusion, parameter substitution, and conditional compilation (it recognizes a subset of
+the C preprocessor directives). Itis needed if you want to use the Fortran skeleton player on
+a non-Unix machine. It may also be useful for Pascal; see the README file for Pascal. PP
+is available in C source form and in IBM-PC executable form.
+
+6, Networking software. The programs described above have only partial networking ability.
+The C players and DANI can contact the Santa Fe Token Exchange only, and the monitor
+supports only local players (on the same CPU). Only one human player at a time can play in
+a local game, because it needs the login terminal. To relax these restrictions, either to set up a
+networking monitor (your own token exchange), or to connéct to a token exchange other than
+the SFTE, you need the full networking software. THIS IS NOT NORMALLY
+DISTRIBUTED FREE TO PARTICIPANTS. Contact the organizers for further
+information.
+
+Note that while the skeleton players are available in several languages, the rest of the software is
+only available in C or in IBM-PC executable form. However you should not need to understand
+or modify any of this C-only software—you will just need to compile it once on your system. If
+you don't have a C compiler please contact the organizers; we will attempt to supply you with a
+binary executable for your machine.
+
+2.3 Obtaining the Software and Documentation
+
+There are three basic ways to obtain the double auction software:
+
+1.  Copy.it electronically from the public directories of the sfi.santafe.edu computer at Santa
+Fe, using ‘ftp’,
+
+2. Request floppy disks from Santa Fe. This is most appropriate if you intend to run the
+software on an IBM-PC or compatible.
+
+3. Request that the software (and optionally the documentation) be sent to you by electronic mail
+from Santa Fe. .
+
+The documentation is all available in electronic form (as simple ascii files), and can be included
+with any of the above methods, Alternatively you can request printed documentation from Santa
+Fe.
+
+These methods are described in more detail in the following subsections.
+
+OBTAINING THE SOFTWARE AND DOCUMENTATION WITH FTP
+
+To obtain files from Santa Fe via ftp, follow the following steps:
+
+1. Connect to sfisantafe.edu with ftp. On most computers the command "ftp
+sfi.santafe,edu" will do this.
+
+2. Specify the user name "anonymous."
+
+Double Auction Tournament -15- Participant's Manual
+3. Specify your own last name (up to 8 characters) as the password. You should then get ftp's '
+prompt (usually "ftp> ").
+
+cd pub.
+cd dat.
+
+If you plan to get the tar.Z, files or dos files (see below): binary. . .
+
+I A wn BF
+
+Use a combination of the following commands to get the files you need:
+a. cd <directory> to change to <directory> on the remote machine.
+b. get <filename> to copy <filename> to your machine,
+
+c. mget <wildname> to copy all files matching <wildname> to your machine. E. g., *c
+matches all .c files.
+
+d. prompt to turn off prompting for each file; use before mget if you want all matches.
+e. Is to list the files in the current directory,
+f, led <ditectory> to change your local directory.
+
+8. quit. 7]
+
+The organization of the directories and files in the pub/dat directory is as follows (names with lines
+descending beneath them are directories):
+
+Co.
+
+-
+
+Double Auction Tournament ~16- Participant's Manual
+a pub/dat
+
+1
+
+l-- README (contains this chart and Notes) —
+l-- directory (ist of participants)
+
+|-- entries (list of tournament entries)
+
+y |-- mail (correspondence sent to dat-list mailing list)
+: l--- monitor.tar,Z
+4 l-- monitor
+| I
+" l--  #.¢ and *,h source files for monitor
+
+l-- Makefile, dmon.mak, dmon.prj
+|-- game, players
+README
+
+I
+
+I
+
+I
+
+I
+
+I
+
+\— players
+
+i }
+
+| Jove Cytar.Z
+
+| ne
+
+| | I
+
+| | |--- 6 and *,h files for C players and human player
+| | |-- Makefile, *.com, *.mak, *.prj
+
+| | }--  helpfile (for human player)
+| |
+
+I
+
+Kites
+
+I-- README
+
+snc
+
+|-—  fortrarilar.Z
+
+l-- © fortran
+
+| I
+
+| | ™,F and *.h files for Fortran players (needs pp)
+| l--- Makefile, Makefile.cray, make.com
+
+| i README
+
+{
+
+[---- pascal
+
+|
+|
+|
+|
+|
+|
+|
+|
+l
+i
+} |-- skeleton.pas for Turbo Pascal
+| | skeleton.p for Unix Pascal (pc)
+I |—  skeleton.vms for Vax/VMS Pascal
+| |--- skeleton.generic for any Pascal (needs pp)
+: I |~- ° Makefile .
+4 i + README
+I
+[---- mise
+i) )
+I l---- danitanZ
+I l-—- dani
+| I |
+| | l--- dani.c, inet.¢ (source files for dani)
+j ! I~ Makefile, make.com
+| j -- README
+| |
+| |
+|
+|
+|
+|
+|
+
+I+ *.c, *h source files for pp
+f+ Makefile, make.com
+i-- README
+|
+L-—- doc,tar.Z
+b--- doo
+I
+_ |---- individual chapters of the documentation
+4 I
+cd [---- dos
+|-—-  dmon.exe
+|----  gdmon.exe
+|--- human.exe
+: |---- player exe
+al |----  pp.exe
+|---- *.bgi and *.chr files for gdmon (PC graphics)
+
+a Double Auction Tournament -17- Participant's Manual
+Notes on the above:
+
+1. The .tar.Z files are compressed files that contain the whole directory listed immediately below
+them. These are only useful if you have a Unix system with ‘uncompress’ and ‘tar’. If you
+have these you can do the following:
+
+a. Get the .tar.Z files you need USING THE BINARY MODE of ftp.
+b. Uncompress each file (e.g., "uncormpress monitor.tar.Z").
+
+c. Unpack each file with tar (e.g., "tar xvpf monitor.tar"). This will make the directory
+concerned (e.g., monitor) within your current directory, and fill it with the files.
+
+d. Delete the .tar file.
+2. Most directories contain a README file. Read this before attempting to compile.
+
+3. Many directories contain files with scripts for compiling and linking. ‘Makefile’ is for Unix.
+A .prj file is for Turbo-C. A .mak file is for Quick-C. A .com file is for Vax/VMS. Read
+these files before using them; there may be things to customize.
+
+4, The dos directory contains executable binaries and graphics files for an IBM-PC. See the
+following section for more details on these files. Be sure to use the binary mode of ftp to
+copy such files. ‘They can then be transferred to a PC in several ways (e.g., PC-NFS). If
+your interest is just in the PC version, you'll probably find it more convenient to get floppies
+than to try this.
+
+OBTAINING THE SOFTWARE AND DOCUMENTATION ON FLOPPY DISKS
+
+If you use an IBM-PC or compatible, it is best to obtain the software on floppy disks. You may
+alternatively be able to use the ftp method, but will then have to compile everything rather than
+receiving executables,
+
+Ask for floppy disks by writing to:
+
+Double Auction Tournament
+Santa Fe Institute
+
+1120 Canyon Road
+
+Santa Fe, NM 87501
+
+Include media/shipping fee of $3 for floppy disks only, or $10 for floppy disks plus complete
+printed documentation ($7.50 for documentation only). The full documentation is included on the
+floppy disks (as simple ascii text files) and is also available via ftp. Unless you make a special
+request, you will receive two floppy disks containing the following:
+
+Double Auction Tournament -18- Participant's Manual
+Boas
+(ess ene
+
+igal
+
+Disk 1:
+
+DMON.EXE monitor without graphics
+GDMON,EXE monitor with graphics
+* BGI, *,.CHR graphics files used by GDMON,EXE (not needed if you have Turbo-C on
+
+your hard disk)
+HUMAN.EXE interface to a human player
+HELPFILE file of help information used by HUMAN.EXE
+PLAYER.EXE sample player program (based on the C skeleton)
+GAME sample gamefile, specifying game parameters
+PLAYERS sample playerfile, specifying players in a garne
+PP.EXE simple preprocessor
+README.PP ‘instructions for PP.EX
+
+PASCAL.DIR directory containing the source for the pascal skeleton player:
+README information about the Pascal versions
+SKELETON.PAS Pascal source for the PC
+
+Disk 2:
+C.DIR - directory containing the source for the C skeleton players, and the human
+; player:
+README instructions for compilation etc.
+SKELETON.C skeleton player
+HUMAN.C human player
+CONTROL,C control routines for skeleton & human
+DEFINE,H header file for skeleton & human
+* MAK Quick-C makefiles
+* PRI Turbo-C makefiles
+
+TCCONFIG.TC — Turbo-C configuration file
+
+FORTRAN.DIR — directory containing the source for the Fortran skeleton player:
+
+README instructions for compilation etc.
+SKELETON.F skeleton player
+CONTROL.F control routines for skeleton
+GLOBALH header file
+SIXCHAR.H file to reduce variables to six characters, if necessary
+FUTLFIG configuration file for Lahey Fortran
+DOC.DIR directory containing all the documentation (except that for DANI) in simple
+
+ascii text files. ,
+Note that this does not include:
+1. The source files for the monitor.
+2. The source files for PP.
+3. The source files and documentation for DANI.
+4
+
+Certain files not needed on a PC, but which may be needed or useful if you are merely using
+PC-floppies to transfer the software to another machine.
+
+Double Auction Tournament -19- Participant's Manual
+You should not need any of these for use solely on a PC. If you request it specially, we will send
+you "Disk 3" containing all the above files, including a README file that explains its contents.
+Please add $1 for this.
+All floppy disks will be 5.25 inch, double-sided, double-density, 362K.
+OBTAINING THE SOFTWARE AND DOCUMENTATION BY ELECTRONIC MAIL
+This method should only be used if neither of the other two is available. Send your request to:
+dat @sfi.santafe.edu
+specifying:
+i. Your name and institution.
+
+2. Your e-mail address.
+
+3, The type of machine{s) on which you want to run the Double Auction Tournament software.
+Specify the operating system (e.g., Unix, VMS) too,
+
+4, The language(s) you want to use for your players (C, Fortran, Pascal).
+
+5. Whether you want the source for the monitor. If you don't get this you can only play with
+the Santa Fe Token Exchange,
+
+6. Whether you want to be able to play games with the Santa Fe Token Exchange. This is only
+possible if your site has the appropriate TCP/IP software and hardware capability.
+
+We will then send you the files we think you need. No individual file will exceed 50K. Files will
+be bundled together into .shar files on a Unix system: instructions will be included. Note that
+binary files cannot be sent via ordinary e-mail.
+
+2.4 Getting Started
+
+There is a lot of software available, and a lot of documentation. You will not master it all at once.
+We suggest the following approach:
+
+FOR UNIX, VMS, ETC. USERS (MULTIPROCESSING MACHINES)}—SFTE USAGE
+
+Before you do anything, try to determine if your machine has Internet TCP/IP access using BSD
+4,2 or 4.3 calls. If it doesn't you cannot use the Santa Fe Token Exchange; go to the next
+subsection. If you can use "telnet" and "ftp" on your machine you probably have the necessary
+access, To find out for sure, determine whether the following routines are available in your C
+run-time library:
+
+socket() connect) inet_ntoaQ
+htonl() htonsQ) beopy() bzero()
+
+‘The ones on the first line are the truly essential ones. They may be in a special library. First try to
+find them via ‘help’ (man' on a Unix system). Then, if'that fails, ask an expert. Note that for
+Vax/VMS there are several implementations of TCP/IP; the Double Auction software currently
+only supports the Wollongong WIN/TCP one. If you have a different TCP/IP implementation and
+want to use the SFTE, please contact the organizers.
+
+Double Auction Tournament -20- Participant's Manual
+
+be
+If you do have the appropriate TCP/IP access, you can follow the following suggestions to play a
+trial game with the SFTE, Otherwise, or if the TCP/IP access is dubious or needs work, proceed
+to the next subsection instead.
+
+1.
+
+If you don't have printed documentation, print the appropriate files from the ‘doc’ directory.
+To start with you'll want at least "intro," "software," and "players."
+
+Get the source files for the Cc players (even if you ultimately want to use Fortran or Pascal).
+
+Read the README file for the C players and follow the directions therein to compile and link
+the players using INETBASED; compile at least "inquire" and the human player (called “hi”
+or "human" depending on your system). If you have difficulty just try to compile "inquire."
+If that doesn't sticceed please check that you followed the instructions (e.g., did you
+customize define.h?) and then contact the organizers (see "Getting Help" below).
+
+Try running "inquire." If it succeeds in connecting to the SFTE, you should get a message
+telling you about the schedule of games at Santa Fe, or a message that says a game is about to
+begin. If instead it says (possibly after up to a minute or so of trying) that it couldn't connect
+to sfi.santafe.edu, the problem may either be with the network or with your machine's
+access to it. Try again later, and keep on trying for a day or more before concluding that
+there's a teal problem. If you have the "ping" command, try "ping sfi.santafe.edu"—if
+this responds with "sfisantafe.edu is alive" then inquire should work too. Asking a
+network expert may also help.
+
+If “inquire” works, try running the human player. Unless you use it at the right time (just
+
+- before any hour), it should give the same message as inquire. Using it just before the hour
+
+should allow you to play a game with the SFTE. Study the “intro” and (at least briefly)
+"players" chapters of the documentation before attempting to play, but don't be afraid to
+experiment. Use the "quit" command when you tire of playing. As long as you completed at
+least the first period, you should receive a listing of the whole game by electronic mail after it
+is over. Study this in conjunction with the "monitor" chapter of the documentation. Please
+tell the organizers if you don't receive a game listing by electronic mail within a few hours of
+playing a game.
+
+You can also try compiling and running a skeleton player (called "di" or “skeleton”
+depending on your system). This is actually simpler than the human player. When you run
+it at the right time it should play a game with the SFTE, displaying it as it goes.
+
+You now have three directions in which to proceed:
+
+a. If you want to write in C, and only want to use the SFTE (not a local monitor), study
+the skeleton.c source file in conjunction with the "skeleton" chapter of the
+documentation.
+
+b. If you want to write in Fortran or Pascal, and want to use the SFTE, now is the time to
+compile and test DANI and the skeleton player in your chosen language. See the
+appropriate README files and the "dani" chapter of the documentation.
+
+c. If you want to set up a local double auction monitor on your machine, follow the
+suggestions in the next subsection.
+
+Double Auction Tournament -21- Participant's Manual
+FOR UNIX, VMS, ETC. USERS (MULTIPROCESSING MACHINES)—-LOCAL MONITOR
+
+In some ways this is the most complicated case because you must compile both the monitor and at »
+least one player before you can get anything going.
+
+1. If you don't have printed documentation, print the appropriate files from the ‘doc’ directory.
+To start with you'll want at least "intro," "software," "monitor," and “players.”
+
+2. Get the source files for the monitor and for the players in the language of your choice. We
+recommend that you put the player files in a subdirectory of the directory containing the
+monitor files,
+
+If your language is not C, also get the C source for the human player. If your language is
+Fortran, also get the source files for 'pp' if you don't have a standard Unix system (see the
+Fortran README file), Make sure you also have any associated README files and
+makefiles. Also make sure you have 'game' and ‘players' for the monitor and ‘helpfile' for
+the human player.
+
+3. Compile the monitor. See the README file for directions. Try running it without any
+command-line arguments: it should read and list the parameters in the 'game' file, and then
+stop with a ‘no active buyers or sellers' message. If anything else happens, investigate
+before proceeding; first check that 'game' and ‘players’ are in the monitor's own directory
+and contain sensible parameters (‘players' should not yet define any players).
+
+4, Compile the skeleton player in.the language of your choice. See the appropriate README
+file for directions. If you choose Fortran you may first need to compile ‘pp’. You will have
+to decide on your communication method, either FILEBASED or PIPEBASED; we
+recommend PIPEBASED for all Unix and VMS systems, For other systems if you are the
+first person to try this software, it may be easier to start with FILEBASED. ="
+
+5. Make a second copy of the compiled skeleton program with a different name (e. g., player2
+_ or player2.exe as appropriate). Simply copying it will work unless you are using
+FILEBASED communication and the program name has to be built into the program, in
+which case you'll have to recompile with the new name; see the appropriate README and
+source files for details.
+
+6. Edit the ‘players’ file (in the monitor's directory) to specify your two players. See the
+, comments in the 'players' file and in the "monitor" chapter of the documentation.
+
+7. Run the monitor. Now a game between your two players should commence. Note thou gh
+_ that games with only one buyer or one seller are not representative of the full game; many
+strategy issues do not arise.
+
+8. Play with the following to familiarize yourself with the system:
+
+a. Adding more players. Note that on many systems you can get away with using the
+same executable binary player program more than once in a game (simply specify it
+multiple times in the 'players' file). This will never work for FILEBASED players
+though; these must always have unique names because the *.in and *,out message files
+must be unique.
+
+b. Changing the game parameters in the ‘game’ file.
+
+Double Auction Tournament -22- Participant's Manual
+Pats tet
+
+eeee
+
+fe
+
+Peat
+
+i)
+
+10,
+
+c. Controlling the monitor with single letter runtime commands (see the "monitor" chapter
+of the documentation.
+
+d. Sending the monitor listfile output to a file (this gives a different screen display); see the
+"monitor" chapter of the documentation.
+
+Compile the human player, See the directions in the README file from the C source. Note
+that you need to customize ‘define.h' differently for the human player and C skeleton
+players. Define the human player in the ‘players’ file, being sure to include the -h flag, as
+‘veil as one or more skeleton players, Run the monitor, seriding the listfile output to a file.
+You should then find yourself playing a game against the skeleton player(s).
+
+To start developing your own strategy, study the "skeleton" chapter of the documentation,
+and then look at the appropriate skeleton.* source file and the README file in the source
+directory.
+
+FOR PC USERS WITH THE SOFTWARE ON FLOPPY DISKS
+
+1.
+
+If you don't have printed documentation, print the appropriate files from the DOC directory
+on Disk-2. To start with you'll want at least "intro" and "software."
+
+Copy the root level files on Disk-1 (i.e. all bunt PASCAL.DIR) to a suitable directory on your
+hard disk. Make a subdirectory-of that directory for the skeleton programs in the language of
+your choice (C, FORTRAN, or PASCAL), and copy the contents of the appropriate directory
+on Disk-1 or Disk-2 into it,
+
+As a trial, you can play a simple game, pitting yourself (via the human player interface)
+
+against PLAYER.EXE, Get into the directory with DMON.EXE in it, and type: | -
+
+DMON OUTEILE
+
+A game should begin with you randomly either a buyer or seller. It will be VERY SLOW,
+and NOT REPRESENTATIVE of the full game with many players; games with only a single
+buyer or a single seller (or both) do not raise most of the strategy issues of a full game. But
+it may help to introduce you to the game and the software. Here are some things to try:
+
+a.  Typea?at any prompt.
+
+b, Type ‘help’ at any prompt. Try some of the commands/options listed there, especially
+u, w, and h. ; ;
+
+c. Type ‘quit’ when you are tired of playing.
+d, -After playing, display or print the file OUTFILE, to which the monitor sent its output.
+
+For more information about the human player and its commands and display, look in the
+‘players’ chapter of the documentation, For more information about the monitor and its
+output (as in OUTFILE) look in the ‘monitor’ chapter of the documentation.
+
+To make things reasonably fast on a PC, we highly recommend creating a RAM disk for the
+players. If you do not currently have a RAM disk running on your machine, one can easily
+be installed using the VDISK program supplied with later versions of DOS. In your
+CONFIG.SYS file (found in the root directory) insert the following line: .
+
+Double Auction Tournament -23- Participant's Manual
+DEVICE=CADOS\VDISK.SYS 128
+
+This assumes that your vdisk.sys file is in the CADOS directory; modify if necessary. The
+128 gives you.a 128K RAM disk, which should be sufficient for several players and their
+message files, increase or decrease as needed. If you have extended memory (beyond 640K}
+you can install your RAM disk there by addin g /E to the end of the above line,
+
+Reboot your machine after changing CONFIG.SYS; you should now have a RAM disk as
+drive D. You can use it just like any other drive except that its contents are lost when you
+turn your machine off or reboot,
+
+Copy your players (.EXE files) to your RAM disk, and change your PLAYERS file to reflect
+their new location; the directory column should just contain 'D:' (or other appropriate drive
+letter) unless you make subdirectories on your RAM disk.
+
+You can also copy the monitor and its associated files to the RAM disk if you make it large
+enough, but this will not convey much advantage.
+
+Once you have mastered using a RAM disk for your players, the process of copying the
+appropriate files to it can be automated with batch file.
+
+5. To try a game with more players, make copies of PLAYER.EXE with different names (e.g.,
+PLAYER1.EXE etc.), and modify the PLAYERS file appropriately to define the players in
+each game. You can try games with or without a human player. If you include a human
+player you must direct the monitor's output to a file (e.g. DMON OUTFILE); without a
+human player you can let the output go to the screen (e.g., DMON’). If you don't have a
+human player the monitor will respond to several single-letter commands from the terminal;
+see the "monitor" chapter of the documentation. ,
+
+6. To try a game with graphical display of the supply and demand curves and transaction prices,
+use GDMON instead of DMON. ‘See also the discussion of the -g and -p options in the
+"monitor" chapter of the documentation,
+
+7. You can also try changing the game parameters in the file GAME,
+
+8. To start developing your own Strategy, study the "skeleton" chapter of the documentation,
+and then look at the appropriate SKELETON .* source file and the README file in the
+source directory. You should try compiling the skeleton without any changes (besides the
+customization required—see the README) before developing any new strategies. The
+resulting player program should behave essentially like the PLAYER.EXE provided.
+
+9. There is a considerable advantage to having a small executable player file, since it must be
+loaded frequently. You may want to explore ways provided by your compiler to minimize
+the .EXE size, including inhibiting some forms of debugging. Some hints are provided in
+the README files and makefiles, In general we find that Fortran executables are larger than
+C executables, which are larger than Pascal executables, -
+
+2.5 Getting Help
+
+We will try to assist you in getting our software to run on your system if necessary. We request,
+however, that you make an effort to thorou ghly understand this documentation before requesting
+individual help from us, since many standard questions are already answered in the documentation.
+Many standard questions are already answered by the organizers in the "mail" file available by FTP
+from pub/dat (see section 1.5 and section 2.3 for details). The organizers are available to answer
+
+Double Auction Tournament -24- Participant's Manual
+questions on the operations of the monitor (pipe-based and file-based only), the skeleton players in
+C, Fortran, or Pascal, DANI, and PP. You can contact us by mail, phone, fax, or e-mail. E-mail
+is recommended, particularly because the expert you need may not be physically at Santa Fe, but
+will receive your message elsewhere. In all cases, please make it clear that you are referring to the
+Double Auction Tournament. Please realize that the organizers have full-time positions elsewhere,
+and so one shouldn't expect our technical help to have as rapid a turn-around time as for
+commercial software.
+
+Address: Double Auction Tournament
+° Santa Fe Institute
+1120 Canyon Road
+Santa Fe, NM 87501
+
+Phone: (505) 984-8800 (office hours 8:30 am-5:00 pm MST)
+
+"Fax: (505) 982-0565 (24 hours)
+
+E-mail: dat@sfi.santafe.edu (for all general inquiries. Do NOT send initial
+inquiries to "dat-list" since this is a mailing list that
+goes out to hundreds of people. Send mail to “dat-
+list" only after reading section 1.5)
+
+palmer @sfi.santafe.edu (for C, Fortran, monitor, DANI, PP)
+
+miller @sfi.santafe.edu (for Pascal) —.
+jpr @sfi.santafe.edu (for questions on DA rules, strategy, etc)
+Double Auction Tournament -25- Participant's Manual
+CHAPTER 3: THE SKELETON PROGRAMS
+
+This chapter describes the structure of the skeleton programs and the variables defined therein.
+The description here is largely language- independent; lan guage-dependent details may be found in
+README files and/or as comments in the software provided for each available language.
+
+3.1 Introduction
+
+Skeleton player programs are presently available in C, Fortran, and Pascal. The skeleton programs
+take care of all the bookkeeping and communication details, allowing participants to concentrate on
+writing the central decision-making routines to implement their strategy. The skeleton programs
+provided are actually complete programs with a simple built-in strategy, and may be compiled and
+used as test players. To produce their own player programs, participants will modify the skeletons
+and re-compile.
+
+A complete player program based on one of the skeleton programs consists of the following parts:
+
+1. The strategy routines, 'BID' and 'BUY' for a buyer, or 'OFFER' and 'SELL' for a seller.
+‘These routines return a value indicating the user's decision. In the skeleton programs as
+supplied these routines contain simple algorithms as examples.
+
+2. Miscellaneous user routines that are called at different stages of the game to provide
+information to the user. These are all empty dummy routines in the skeleton programs as
+supplied. They do not need to be modified unless users desire to usé them to gather
+information or initialize or update their own variables.
+
+3. Control routines that take care of bookkeeping, communicating with the monitor, calling the
+strategy and miscellaneous routines, saving and restoring variables, displaying the game,
+providing random numbers, etc. Participants should not need to change these routines, or
+even to understand how they work.
+
+Note that routine names are written in upper-case (e.g., BID) in this document, but may need to be
+lower-case in actual programs.
+
+In more detail, the user routines are as follows:
+
+STRATEGY ROUTINES
+
+BID For a buyer, called at the start of each bid-offer step to decide on a@ bid value, or to
+pass.
+
+OFFER. por a seller, called at the start of each bid-offer step to decide on an offer value, or
+© pass.
+
+BUY por a buyer, called at the start of each buy-sell step to decide whether to request to
+
+uy.
+
+SELL. For a seller, called at the start of each buy-sell step to decide whether to request to
+
+sell.
+
+Note that a player program can play a buyer or a seller, or may be able to play either, If only one
+of the roles is chosen, then only two of the four strategy routines needs to be developed.
+
+Double Auction Tournament ~26- Participant's Manual
+ed
+
+However, in the tournament, players that can only play one role will be selected for fewer games,
+and thus have less opportunity for profit.
+
+More details about the return values of these routines is given in the last section of this document,
+MISCELLANEOUS ROUTINES |
+
+GBEGIN Called once at the beginning of each game.
+
+GEND Called once at the end of each game.
+
+RBEGIN Called at the beginning of each round.
+
+REND _ Called at the end of each round.
+
+PBEGIN Called at the beginning of each period.
+
+PEND Called at the end of each period.
+BOEND Called at the end of each bid-offer step, after all players’ bids. and offers have been
+processed. —
+BSEND Called at the end of each buy-sell step, after all players’ buy and sell requests have
+been processed. _
+
+3,2. Variables in the user routines
+
+The variables and arrays described below are available in all the user routines (strategy routines and
+miscellaneous routines). They provide all the information available to the player, on which
+pid/offer/buy/sell decisions must be made. The variable names and meanings are almost the same
+in all languages, and are defined here in a language-independent way. See the comments in the
+appropriate skeleton programs for all languagé-dependent details.
+
+None of the variables described should be altered by the user routines themselves; doing so will
+not have any useful effect.
+
+All variables are integers. Prices are represented by integers in the range 1—8000, It is of no
+consequence whether these values are regarded as dollars, cents, or some other unit.
+
+Some variables are one-dimensional arrays of fixed length. The length is given in square brackets.
+Thus, for example, token[4] represents a 4element array. How this is declared and referenced is
+language-dependent. In general array indices or subscripts run upwards from 1, not from 0.
+
+Tt is convenient to divide the variables into three classes, according to whether they are public (the
+game for all players) or private, and whether they are constant or varying:
+
+PUBLIC CONSTANTS
+
+These variables are unchanging throughout a game (the same in all periods and steps), and are
+known to all players:
+
+nplayers The total number of players in the game, including yourself.
+
+nbuyers The number of buyers in the game. This will never exceed 20,
+
+Double Auction Tournament -27- Participant's Manual
+nsellers The number of seilers in the game. This will never exceed 20. Note that
+nbuyers+nseilers = nplayers,
+
+bnumber[20] A player-number for each buyer, in the range 1—9999. There is one entry for
+each buyer, 1 to nbuyers, and the remaining entries are zero. These numbers
+are intended to give a unique identification to each program and participant
+across all games, so that participants in the pre-tournament Santa Fe Token
+Exchange games can determine who they have and have not played against. A
+directory will be available. A value of 9999 is used to mean a human player.
+Some values may be reported as 0 to mean anonymous; all players will be
+anonymous in the actual tournament. Do not confuse player-numbers with the
+player id's (described below) that are used to identify the players in a particular
+game.
+
+snumber[20} A player-number for each seller. Like bnumber[20],
+
+nrounds The maximum number of rounds in the game, This will never exceed 20,
+nperiods The maximum number of periods perround. This will never exceed 5.
+ntimes ' The number of time units in each period. This will never exceed 400, At each
+
+time there is first a bid-offer step and then a buy-sell step. A period will not be
+terminated before all 'ntimes' time units have been played if it is possible for
+any pair of players to trade with mutual profit. Early termination will rot
+necessarily occur even when no more mutual: profit is possible; see the
+description of the monitor's ‘deadsteps' parameter.
+
+minprice The minimum price vaiue allowed for any bid or offer.
+
+maxprice The maximum price value allowed for any bid or offer. Note that 1 <= minprice
+= maxprice <= 8000. oe,
+
+gameid An arbitrary unique integer in the Tange 1 - 9999 that identifies this particular
+game. The gameid is useful for referring to particular games and for creatin £
+unique filenames, etc. It will normally increase from game to gare.
+
+gametype A 4 (decimal) digit number conveying the values for RANI,..., RAN4. The
+RAN() values govern the ratidom generation of tokens as described in rule 25
+of chapter 7. The RAN(i) values are given by
+
+RAN(i) = 3k@)- 1° j=1,..,4
+
+where k(i) is the i'th digit of gametype, counting from the left), and where 3k(i) denotes 3 to the
+power k(i). Thus, for example, gametype = 1236 means
+
+RANI =3!1-1=2
+RAN?2 = 32-1=8
+RAN3 = 33-1 =28
+RAN4 = 36. 1 = 728
+
+The values for the digits k(i) are restricted to (0,1,...,8). Values of gametype less than 1000 are
+
+taken as having leading zeroes. gametype = 0 implies that the token generation method is not
+revealed,
+
+Double Auction Tournament -28- Participant's Manual
+ry
+
+The upper limits on nbuyers, nsellers, nrounds, nperiods, and ntimes specified above may be
+relevant if you want to construct your own arrays to record historical or strategic information about
+other players or the game so far. In fact the upper limits will rarely be approached, and you can set
+lower limits of your own if necessary; see the skeleton programs for details. If the parameters of a
+particular game exceed your own limits, your program will automatically refuse to play in it. Note
+also that no token value is allowed to exceed 8000 (due to technicalities of the software design). If
+the RAN(i) values are set sufficiently high, this limitation will cause an upward truncation in the
+token distribution at 8000. However rule 25 in chapter 7 guarantees that in the tournament RAN(i)
+values will be chosen so that such truncation will never occur.
+
+PUBLIC VARIABLES
+
+These variables change with the progress of the game and are known to all players, All are set to 0
+before the start of the game and (except r and p) before the start of each new period (ie, before the
+call to PBEGIN). The “unknown” values referred to below can only occur if a player makes a
+
+‘late’ response (sée ‘late' below). ;
+
+r The number of the current round, r= 1, 2, .., nrounds. \
+
+p The number of the current period within the current round, p = 1, 2, ..., nperiods.
+t . The current time within the current period, t=1,2,..., ntimes.
+
+ebid The current bid value if any, ot zero if notie. In a SELL routine this is the value
+
+you accept in a sell request. In a BID routine this is the value to beat; a new bid
+must be-above this value. Ina bid-offer step the highest bid (if any) determines the
+new cbid value before the call to BOEND. The current bid is removed (cbid=0)
+whenever a trade occurs, béfore the callto BSEND. —- , ,
+
+coffer The current offer value if any, or zero if none. In a BUY routine this is the value
+you accept in a buy request. In an OFFER routine this is the value to. beat; a new
+offer must be below this value. In a-bid-offer step the lowest offer (if any)
+determines the new coffer value before the call to BOEND. The current offer is
+
+removed (coffer=0) whenever a trade occurs, before the call to BSEND.
+
+bidder The id of the holder of the current bid, or zero if none. Between 1 and nbuyers
+when cbid>0, always 0 when cbid=0.
+
+offerer The id of the holder of the current offer, or zero if none. Between i and nseliers
+when coffer>0, always 0 when coffer=0, ,
+
+nbids The number of new bids made by buyers in the last bid-offer step, or 0 if none or
+unknown, Updated before each BOEND call.
+
+noffers | - The number of new offers made by sellers in the last bid-offer step, or 0 if none or
+unknown. Updated before each BOEND call.
+
+bids[20] The actual bids made by each buyer in the last bid-offer step, or zero if none or
+unknown... There is one entry for each buyer, 1 to nbuyers, and the remaining
+entries are zero. The whole array is reset to reflect the new bids before.each
+BOEND call.
+
+offers[20] The actual offers made by each seller in the last bid-offer step, or zero if none or
+unknown. There is one entry for each seller, 1 to nsellers, and the remaining
+
+Double Auction Tournament -29- Participant's Manual
+bstype
+price
+buyer
+seller
+
+btrades[20]
+strades[20]
+ntrades
+
+prices[80]
+
+lasttime
+
+entries are zero, The whole array is reset to reflect the new bids before each
+BOEND call.
+
+A code telling what happened in the last buy-sell step: 0 if no trade occurred, 1 if a
+buy request was accepted, 2 if.a sell request was.accepted, -1 if unknown because
+of a ‘late’ condition. This is set before each BSEND call. The next three variables
+provide more detail about the transaction if bstype>0. They are set at the same time
+as bstype. They are all set to zero if bstype<=0,
+
+The price of the transaction.
+
+The id of the buyer involved in the transaction. If bstype=1 this is a buyer whose
+‘buy’ request was accepted. If bstype=2 this is the buyer whose current bid was
+accepted by ‘seller’: oo
+
+The id of the seller involved in the transaction. If pstype=2 this is a. seller whose
+‘sell’ request was accepted. If bstype=1 this is the seller whose current offer was
+accepted by ‘buyer’,
+
+A summary array giving the number of trades that each buyer has made se far in
+this period. ‘There is one entry for each buyer, 1 to nbuyers, and the remaining
+entries are zero. A trade for a buyer is an accepted buy request or the acceptance by
+a seller of that buyer's current bid; in either case one token is consumed. Updated
+
+before each callto BSEND. — Lo _
+
+A summary array giving the number of trades that each seller has made so far in this
+period. There is one entry for each seller, 1 to nsellers, and the remaining entries
+are zero, A trade fora séller is an accepted sell request or the acceptance by a
+buyer of that seller's current offer; in either case one token is consumed, Updated
+before.each calltoBSEND, ~ —_- .
+
+The total number of trades made by all players so far in this period.
+
+The price of every trade that has occurred so far in this-period. There is one entry
+for each trade, 1 to ntrades, and the remaining entries are zero. The value is
+negative (multiplied by -1) if the trade was made by you.
+
+The time (value of t) at which the most recent trade occurred in this period, or 0 if
+no trade has occurred yet in this period.
+
+PRIVATE VARIABLES
+
+Most of these variables change with the progress or the game and are in general different for each
+player. Ail are set to 0 before the start of the game. mytrades, mylasttime, pprofit, nobidoff, bo,
+nobuysell, bs, and late are reset to 0 at the start of every-period and round. In addition at the start
+of each round, rprofit, tradelist[5], and profitlist[5] are reset to zero, and ntokens and tokens[4] are
+set to their néw values.
+
+id
+
+role
+
+Your own identification number, between 1 and nbuyers if you are a buyer, and
+between 1 and nsellers if you are a seller. When the id number of another player is
+given, it is always clear from context whether it is that of a buyer or that of a seller.
+
+i if you are a buyer, 2 if you are a seller.
+
+Double Auction Tournament -30- Participant's Manual
+
+bed
+timeout
+
+ntokens
+
+token{4]
+
+mytrades
+
+mylasttime
+pprofit
+rprofit
+gprofit
+
+nobidoff
+
+bo
+
+The number of seconds of elapsed (wall) time that you have per step. 9999 implies
+infinity; the monitor will wait for ever. 0 means a relatively short time, normally
+used for pipe-based players, that depends on the monitor's ‘timefactors'
+parameters.
+
+The number of tokens that you have available to buy or sell. This is fixed for a
+given round, but may change from round to round. It will never exceed 4, and in
+the tournament it will be the same for all players. -
+
+The redemption values of your tokens, in token| 1], .., token[ntokens]. The
+redemption values are given in decreasing order for a buyer and in increasing order
+for a seller, and are assumed to be used in that order, which maximizes any profits.
+Any unused array elements are set to 0.
+
+The number of trades (0 - ntokens) that you have made so far in this period. This is
+equal to the appropriate entry in btrades or strades. If mytrades<ntokens your next
+available token value is token[mytrades+1]. If mytrades=ntokens you have used all
+your tokens and cannot make any further bid, offer, buy, or sell requests.
+
+The time (value of t) at which your most recent trade occurred in this period, or 0 if
+you have not yet made any trades in this period.
+
+Your total profit so far in this period of the game, or 0 if you have not yet made any
+trades in this period,
+
+Your total profit so far in this round of the game, or 0 if you have not yet made any
+trades in this round. 7
+
+Your total profit so far in this game, or 0 if you have not yet made any trades.
+
+0 if you are allowed to make a bid or offer, 1 if you can't because you have no
+tokens left. -1 if unknown because of a ‘late’ condition. Reset before each call to
+BID or OFFER, -
+
+A code that tells you the outcome of your request in the last bid-offer step. This is
+updated before each call to BOEND. The meaning of the cades is as follows:
+
+0 You didn't make a bid or offer, and you don't still hold the current one.
+
+1 You didn't make a bid or offer, but your previous bid or offer is still the
+current one.
+
+2 Your bid or offer was chosen and is now the current one.
+3 Your bid or offer was bettered by another player.
+
+4 Your bid or offer was equal to that of at least one other player, and you lost
+the random tie-break.
+
+-1 Your bid or offer was unacceptable. This could be because it was outside the
+allowed range (minprice to maxprice), or because it was a bid that wasn't
+above the current bid, or an offer that wasn't below the current offer, or
+because you have no tokens left to trade.
+
+Double Auction Tournament -31- Participant's Manual
+nobuysell
+
+bs
+
+late
+
+-2 A previous response to a bid-offer or. buy-sell step was late and was ignored.
+See ‘late’ below.
+
+Note that your new bid or offer is reported to the other players in cases 2-4, but not
+in case -1 or -2.
+
+O if you are allowed to make a buy or sell Tequest, non-zero if not. -1 if unknown
+because of a ‘late’ condition. This is reset before each call to BUY or SELL.
+When non-zero the value is between | and 7, given by the sum of whichever of the
+following apply:
+
+1 No tokens left to trade.
+
+2  Nocurrent offer/bid to accept.
+
+4 You don't hold the current bid or offer.
+
+A code that tells you the outcome of your request in the last buy-sell step. This is
+reset after each buy-sell step. The meaning of the codes is as follows:
+
+QO You didn't make a buy or sell request.
+
+1 Your buy or sell Tequest was accepted and you made a trade.
+
+2 Your buy or sell request was rejected because both the current bidder and the
+
+current offerer asked to buy/sell, and you lost the random tie break (losing is
+usually better than winning here),
+
+3 Your buy or sell request was rejected because another buyer or seller (the
+same type as you) also made a valid request, and won the random tie-break.
+
+-1 Your buy or sell request was unacceptable. This could be because there was
+no corresponding current offer or bid, or because you had no tokens left to
+trade, or because you didn't hold the current bid or offer, This should not
+occur if you never try to buy or sell when nobuysell is non-zero.
+
+-2 Aprevious response to a bid-offer or buy-sell step was late and was ignored.
+See ‘late’ below,
+
+Note that only successful buy/sell requests (bs=1) are reported to the other players,
+
+Note also that you may have made a trade even if bs is not equal to 1, because your
+current bid or offer may have been accepted by another player. Check whether
+‘buyer’ or ‘seller’ (as appropriate) is equal to your 'id' to know for sure.
+
+The number of times in this period that you were late and failed to respond on time.
+If this is non-zero, be aware that the following variables may be incorrect in this
+period, even long after the late response, because information from the monitor may
+have been missed: btrades[20], strades[20], ntrades, prices, lasttime, mylasttime,
+pprofit. The following variables may be incorrect in this period and/or in future
+periods if you were ever late: rprofit, gprofit, profitlist[5], efficiency. The
+following variables may be temporarily incorrect, while either bo or bs is set to -2,
+but should recover correctly: nbids, noffers, ‘bids[20], offers[20], bstype, price,
+
+Double Auction Tournament -32- Participant's Manual
+buyer, seller, nobidoff, nobuysell, t. Except for t this last group is set to well
+defined "unknown" values when a correct value is not known because of a late
+response; see the entries for the individual variables above. t may temporarily be
+smaller than its true value after a late response.
+
+tradelist[5] The number of trades you made in each period of this round. There is one entry for
+each period, 1 to p, started so far in this round, and the remaining entries are 0.
+Updated after each trade.
+
+profitlist[5] The profit you made in each period of this round. There is one entry for each
+period, 1 to p, started so far in this round, and the remaining entries are 0. Updated
+after each trade.
+
+efficiency A measure of your overall performance in this game, available only in the GEND
+routine at the end of the game. The measure is a ratio (times 100) of your actual
+profit to your expected profit predicted by economic theory (computed at the
+
+midpoint competitive equilibrium price). 100 is average, higher values are better.
+3.3 Working variables
+
+If file-based communication is in use, each player program must be reloaded for each step, and all
+needed variables must be saved to a disk file and restored from it. The control routines do this
+automatically for all the variables discussed above, and can also save specified variables of your
+own. How this is done is language dependent; see the comments in the README file and skeleton
+programs for your chosen language.
+
+If pipe-based or internet-based communication is used, the player programs are continuously
+loaded during a game, and the save/restore mechanism is not needed. You may create new
+variables as you please (including global or common ones), and expect them to retain their values
+according to the usual conventions of the language used.
+
+Player programs may also create and use external files of their own; each player program will
+normally exist in its own sub-directory. Such files will be preserved from gameé to game.
+
+3.4 Return values
+
+In a BID or OFFER routine you must specify a bid or offer value, or none. In a BUY or SELL
+routine you must say if you want to buy or sell. The way that these return values from your
+strategy routines are passed back to the control routines is language-dependent. For details see the
+comments in the skeleton program for your language. Here we simply define the values
+concerned. All values are integers.
+
+BID (buyer only) For a BID routine, return the value of the bid if you want to make
+one, or 0 if you don't. If you do make a bid it must be between minprice and
+maxprice inclusive, and must be higher than the current bid ‘cbid' if there is one.
+You must return 0 if nobidoff is non-zero.
+
+OFFER (seller only) For an OFFER routine, return the value of the offer if you want to
+make one, or 0 if you don't. If you do make an offer it must be between minprice
+and maxprice inclusive, and must be lower than the current offer 'coffer' if there is
+one. You must return 0 if nobidoff is non-zero.
+
+Double Auction Tournament -33- Participant’s Manual
+BUY (buyer only) For a BUY routine, return 1 if you want to request a buy at the
+current offer price ‘coffer', or 0 if you don't. You must return 0 if nobuysell is
+non-zero.
+
+SELL (seller only) For a sell routine, return 1 if you want to request a sell at the current
+bid price ‘cbid', or 0 if you don't. You must return 0 if nobuysell is non-zero,
+
+Double Auction Tournament -34- Participant's Manual
+4
+
+wl
+
+CHAPTER 4: THE MONITOR
+
+This chapter explains how to use the monitor, and how to interpret its output. The latter is useful
+not only to participants running a local monitor, but also to those using the Santa Fe Token
+Exchange (SFTE); the SFTE monitor mails its main (listfile) output back to each participant.
+Instructions for compiling the monitor are not given here; see the README file in the monitor
+source directory.
+
+4.1 Starting the monitor
+
+On an IBM PC two executable versions of the monitor are provided, called. 'dmon' and 'gdmon’.
+The difference is that 'gdmon' has graphics built in, and turned on by default, ‘'dmon’ is smaller
+and has no graphics capability. On other computers without graphics capability the monitor is
+normally called ‘dmon’.
+
+Before running the monitor you must set up the gare file and players file in the same directory as
+the monitor. The versions provided, called ‘game’ and ‘players’ respectively, contain comments
+that document the format of these files, and some example entries.
+
+The game file specifies the basic parameters for the game, including the number of rounds and
+periods etc, token generation parameters, and timing parameters. See the supplied ‘game’ file for
+details. ,
+
+The players file specifies all local players (network players are controlled by parameters in the
+game file, if you have the full networking software). Each local player is specified by a directory
+name and a file name. The directory specification is relative to the monitor's own directory, so for
+example a directory ‘playdir’ means subdirectory playdir of the monitor's directory. It is
+recommended (for speed) that all players either be in such immediate subdirectories or be in the
+
+- ‘monitor's own directory, but other directory specifications (and, for the PC, drive specifications)
+‘are allowed. Examples are given in the supplied 'players' file. Note that all file-based players must
+
+have distinct pathnames, whereas pipe-based players may be specified more than once on Unix
+systems.
+
+Each player may also be given one or more option flags in the players file, It is crucial that these be
+assigned correctly. See the description and examples in the supplied ‘players’ file.
+
+Once the game file and players file are set up correctly, the monitor may be started with a command
+of the form
+
+dmon [options] [ listfile [ logfile [ gamefile [ playerfile ]]]]
+
+It is essential that the current directory is set to the monitor's directory; starting the monitor from
+another directory will NOT work.
+
+Double Auction Tournament -35- Participant's Manual
+The options will be discussed later. The four optional file names have the following meanings and
+defaults: .
+
+listfile Main output listing of the game. Defaults to stdout.
+
+logfile Initial setup report and error messages. Defaults to stdout.
+
+gamefile File specifying game parameters. Defaults ta ‘game’.
+
+playerfile File specifying local players. Defaults to ‘players’,
+
+Any of these filenames may be specified as - to mean the default. A + preceding logfile (e.g.,
+"+log") implies append to the end. logfile may be specified as = to mean the same as listfile. If
+
+listfile or logfile contain any #'s they will be replaced by digits of the game number, E. £., OUtHHT
+becomes out284 for game 284 (or 12.84).
+
+Examples (for game 538):
+
+dmon everything goes to stdout
+
+dmon outi##Ht main report to out538, log to stdout
+dmon outii## log##H# main report to out 38, log to 10g538:
+dmon out### +dmonlog main to out538, log appended to dmonlog
+dmon out####= everything to out538
+
+dmon - - newgame dummies everything to stdout; game and players files
+specified as ‘newgame' and ‘dummies’ _
+
+Output redirection with > is not recommended for the monitor output. The monitor tries to write
+
+sensible things to its listfile and logfile depending on whether or not they go to files, and whether
+or not they go the same place; using redirection prevents this,
+
+Double Auction Tournament -36- Participant's Manual
+ead
+
+eo
+
+ind
+
+ind
+
+The following options may be specified:
+
+-b
+
+“8
+
+-g0
+
+-ppath
+
+Turns off terminal input. MUST be used to run the monitor in background/batch.
+
+Turns on all graphics, if available. Currently only available on the PC. This is the
+default for 'gdmon’.
+
+Restricts graphics to display only the supply and demand curves at the start of each
+round.
+
+Restricts-graphics to display only the transaction data (with supply and demand
+curves) at end of each period.
+
+“Makes graphics automatic—it displays whatever you selected with the. above options
+
+without asking you first.
+
+Turns off graphics if on by default. Note: -g options may be concatenated, E.g., - -
+g2a ;
+
+Specifies PC directory where the BGI and .CHR graphics files are located, E.g., -
+p\tc2. The defaiilt for the precompiled versions of the monitor is \tc. If the files are
+not found in the specified or default directory, they are searched for in the monitor's
+own directory. Note that the .BGI and .CHR files are provided on the floppy disk
+with dmon, but you probably already have copies on your hard disk if you have
+Turbo-C.
+
+Example with options:
+
+- dmon -b out#### Hog &
+
+(The & is a Unix special character that makes the job run in the background.)
+
+4.2 Runtime commands
+
+If no player uses the terminal (no -t or -h flag in the players file), and there is no -b flag on the
+dmon command line, the following single-letter commands are available while the monitor is
+
+running:
+
+A. While waiting for network players (inet version only):
+
+8
+
+t
+
+P
+
+start the game now
+acrgq abort the game
+
+. During the main game:
+
+make this the last time step of this period (after next BS step).
+make this the last period of this round.
+
+make this the last round of the game.
+
+end the game; equivalent to 'rpt’.
+
+quit; like 'e', but suppresses mailback and any final graphic display.
+
+Double Auction Tournament -37- Participant's Manual
+k kill any players we're waiting for now.
+c continue; force the next step now (may mark some players as late).
+
+These commands do not echo and take effect immediately (though output may be backlogged,
+making an apparent delay). Any other character rings the bell. Use 'k' only when the monitor is
+stuck waiting for a player who is not responding,
+
+4.3 VAX/VMS Notes
+
+The monitor should work correctly on a VAX/VMS system. The treatment of file-based players is
+straightforward and should cause no problem, but may be very slow on a busy system. Pipe-
+based players are much more efficient, and thus faster, but more fragile. Each pipe-based player is
+started up as a sub-process of the monitor, and.communicates with it via VMS "mailboxes." If
+something goes wrong it is possible for the player subprocess to continue running (in a wait state)
+even after the monitor exits or aborts. You can check for subprocesses with the command
+"SHOW PROCESS/SUB"—the player sub-processes are called PLAYER1, PLAYER2, etc. If
+you see any of these in the process tree, you can kill them with "STOP PLAYERn." The monitor
+will refuse to run a player if its chosen sub-process name already exists.
+
+Note that you must have the TMPMBX -and NETMBX process privileges, and a non-zero
+subprocess quota, to run the monitor. Most users will have these.
+
+Be patient when starting a game. WAX/VMS takes a relatively long time to start up a subprocess
+when the system is busy.
+
+4.4 Explanation of Monitor "Listfile" Output
+
+The main output of the monitor is a concise surnmary of the game parameters, the players
+involved, and the actual play of the game. It is produced in the “listfile" output of the monitor,
+which defaults to stdout. In network games run at the Santa Fe Token Exchange, the listfile output
+is automatically e-mailed back to participants after successful game completion. ©
+
+PARAMETER SECTION
+
+The first section of the listfile output gives the parameters used in the game. For example:
+
+DA game 1738 Sun Jun 4 19:52:45 1989
+
+files: outl738 - game players
+
+protocol: 3 monitor: 385 gametype: 1
+nrounds: 2 nperiods: 2 ntimes: 50
+minprice: 1 maxprice: 1000 ntokens: 4
+rani: 500 ran2: 0 ran3: 50
+ran4; 3 deadsteps: 0 timeout: 30
+btokens: 450 375 250 «175
+
+stokens: 50 150 225 275
+
+timefactors: 1000 500 500 500 500 500 250
+
+The heading gives the game number (gameid) and the date and time that the game began.
+
+Double Auction Tournament -38- Participant's Manual
+cient a
+
+The ‘files:’ line gives the names of the files used for the listfile, logfile, gamefile, and playerfile, in
+that order. See the monitor's README file for details, The - in the above example means that the
+logfile output was sent to stdout.
+
+‘protocol’ and. ‘monitor’ give the version numbers of the message-passing protocol and monitor
+program respectively. They can normally be ignored.
+
+The remaining parameter values are all specified in the gamefile. They are explained by comments
+in the distributed version of this file, called 'game’.
+
+The jnternet version of the monitor (as used at the Santa Fe Token Exchange) adds several more
+parameters to the above list, The additional parameters are all concerned with controlling the
+waiting period for players, and the maximum and minimum number of players required for a
+game. They should not be important unless you have the internet version of the monitor, in which
+case you will find an explanation in the extended version of the 'game’ file.
+
+PLAYER SECTION
+
+The second section of the listfile output lists the players involved in the game. For example:
+
+id num ‘flags _ location name/comment
+Bi 500 op playdir/qp Pipe C skeleton
+B2 9999 isH palmer@physics .phy.duke,edu Richard Palmer.
+Si 502 sp fortran/pplayer Fortran skeleton
+$2 501 off playdir/qf . File C skeleton
+
+2, buyers, 2 sellers
+
+The ‘id’ column gives the name used for each player, starting with B for buyers and S for sellers.
+
+“The ‘num' column gives the player-number of each player; this should uniquely identify the player
+‘and the strategy. Participants are assigned a range of values to use. 9999 is used for human
+
+players. 0 means that a correct value is unknown or has not been assigned; participants should ask
+for a correct assignment rather than using 0 except temporarily.
+
+The ‘flags’ show various status flags for each player. Most of these are specified or implied by the
+player descriptions in the playerfile, see the comments in the distributed version of this file called
+‘players’. The first column of flags describes the communication method, and may be f (file-
+based), p (pipe-based), a (pipe-based with descriptors passed in the argument string), or i
+(internet-based), The second column describes the timing option, and may be s (slow), w (wait),
+or blank (default). The third-column describes the player/connection/output type, and may be
+blank (default), t (player requires terminal), h (human player), H (human player via internet), 4
+(connected via DAND) or c (C-player via internet).
+
+The ‘location’ gives the directory and filename (relative to the monitor's directory) for a local
+player, or the internet address of a network player, The internet address is not necessarily that at
+which the player is located, but is normally a suitable mailing address for the player. A numerical
+address enclosed in square brackets (e.g., fred@[192.12.12.2]) may be used with most mailers.
+An address or comment appearing in parentheses (€.g., joc@ (ocal)) is NOT suitable for e-mail.
+
+The ‘name/comment’ column gives the comments from the playerfile for local players, and the
+
+player or program name for network players. DANI and the human network interface both ask the
+player for his/her name, while the C internet-based player has a player name built into the program.
+
+Double Auction Tournament -39- Participant's Manual
+GAME SECTION—TOKEN DISTRIBUTION
+
+The main game report consists of token-distribution headings, step-by-step lines, and summaries.
+The token-distribution headings appear at the start of each period. For example:
+
+Round 1, Period T
+token Bi B2 $1 82 Equiltbriam
+a 816+ 816+ 4294+ 407+ 641 to 650
+b 762+ 765+ 553+ 553+ avi 645.5
+c 638+ 661+ 641+ 640+ trades: 6
+d 555— _553- | 650. 653~
+
+The tokens assigned to each player are labeled a, b, etc., with values as given in the table. Each
+value has a+ ora- appended to it, depending on whether (+) or not (-) it would be traded if all
+trades occurred at the theoretical average equilibrium price. An = is used if the token value is equal
+to the average equilibrium price. ;
+
+The ‘Equilibrium’ column shows the equilibrium price range and its average. There is often a
+finite range because the supply and demand curves usually have a vertical segment in common,
+The number of trades expected in equilibrium is also shown; this is normally equal to the number
+of + suffixes in both the buyer and the seller columns. “no crossing*' appears below 'trades' if
+the supply and demand curves do not cross,
+
+GAME SECTION—STEP-BY-STEP LINES
+
+Each bid-offer and buy-sell step is summarized on a line. For example:
+
+t_step {| Bl B2 si S2 cbid__coff “price
+I BO 476* 469 | 717* 722 "476717
+
+BS |. So , 476. 717
+2 BO 549* 541 | 644* 645 1549 644
+
+BS | a<A A 644
+3 BO 476* 469 | 717* 729 476 717
+
+BS © 476 717
+4 BO 549 550*| 667 654* | 550 654
+
+BS | - 550 . 654
+3 BO 581 585*} 623 623* | 585 623
+
+BS a<A a<A 623
+29 BO 639* 644* D 639 644
+
+BS D 639 644
+30. BO 641* 642* D 641 642
+
+BS D 641 642
+31 BO 642* " D 642 = 642=
+
+BS co coC D 642
+
+The leftmost columns show the time t and whether the step is a bid-offer (BO) or buy-sell (BS)
+siep. The rightmost columns show the current bid and current offer, if any, at the conclusion of
+cach step, and the price of any transaction that occurred. An = sign or ! sign follows the current
+offer-column if the current bid is equal to (=) or greater than (!) the current offer.
+
+Double Auction Tournament -40- Participant's Manual
+
+4
+
+ca)
+For bid-offer steps the central columns show the bids and offers-made by each player. The current
+(highest) bid and current (lowest) offer are indicated by a* suffix. If there are no new current bids
+but one is left over from the previous bid-offer step itis shown by a double quote ("), and similarly
+for offers.
+
+For buy-sell steps the central columns indicate requests to buy or sell by lower-case letters, and
+actual tokens sold by upper-case letters. The letter used identifies the token concerned. The
+direction of a transaction is indicated by the < or > symbols, which point like arrows from the
+accepted bid or offer to the acceptor, < means a buy request-was accepted and > means a sell
+request was accepted. Thus for example in step 5 BS, both B2 and $2 made buy/sell requests and
+B2 ‘won' the random 50-50 tie break, so a ‘buy’ trade was executed at the current offer price.
+Note that itis in fact better to ‘lose’ such a random tie break unless the current bid is greater than or
+equal to the current offer. ;
+
+Several other symbols may appear in the central columns in either bid-offer or buy-sell steps:
+
+D means that the player is ‘dead’, for one of many reasons. Death is irreversible. The D
+symbol may also appear in the summaries described in the next section.
+
+X means that the player's response was unacceptable, such as a bid below the current bid, or a
+buy request when there is no current offer,
+
+means that the player is non-responsive—no reply was received for this step.
+
+L means that.the player made a ‘late’ response, presumably to a previous step. A response is
+marked as late, and otherwise ignored, following any non-responsive (N) step.
+
+2 means that the response was invalid or unrecognized.
+
+Note that the above symbols marking abnormal situations may be combined with some of the
+normal symbols, For example D" could occur in a bid-offer step if the holder of the current offer
+died and no other offer was made, and could be followed by D<B if a buyer subsequently accepted
+this offer, thus buying the ‘dead’ player's second (B) token.
+
+A line is drawn across the output when no further mutual profit is possible. If the ‘deadsteps'
+parameter is set to 0 this will cause the period to be ended, but if deadsteps > 0 further steps may
+appear after the line.
+
+GAME SECTION—SUMMARIES
+
+Summaries appear at the end of every period, and at the end of every round, and at the end of the
+game. The three types have basically the same appearance but apply to the preceding period,
+round, or game respectively. For example:
+
+Round 1, summary
+
+Bl B2 Sl $2
+Market
+‘Trades 6/6 6/6 7/6 5/6 24/24
+Profit 667 697 559 532 2455
+
+Eqlbrm 599 611 627 532 2470
+Effncy 111% 114% 89% 84% 99%
+
+Double Auction Tournament -41- Participant's Manual
+The 'Trades' row shows the number of trades made by each player, out of the number predicted if
+all trades occurred at the theoretical equilibrium prices, The final 'Market’ column shows the same
+information for the whole market (buyers plus sellers),
+
+The ‘Profit’ row shows the actual profits made. The ‘Eqlbrm' row shows the profits predicted if
+all trades occurred at the theoretical equilibrium prices, A «following an Egibrm value means 0.5
+(e.g., 585. would mean 585.5).
+
+The 'Effncy' row shows the ‘Profit’ row as @ percentage of the 'Eqlbrm' row, The 'Effncy' may
+be shown as 0/0 (if Profit and Eqlbrin are both 0), or as ‘inf’ (if Eqlbrm is 0 but Profit is not), or
+as ‘huge’ (if greater than 9999%).
+
+4.5 Explanation of Monitor "Logfile" Output
+
+The monitor's "logfile" output is used to display the startup phase of the garne, and to display error
+messages. It may be sent to the same file as the Listfile output (in which case error messages are
+interpolated into the game report), or to a different file. Depending on whether the files are the
+same or different, and whether the output is to a named file or to stdout (the default), the logfile
+output also shows more or less information on the progress of the game.
+
+STARTUP PHASE
+
+During the startup phase the logfile shows one line for each player that the monitor tries to start,
+For example:
+
+dat@ 192.12.12.1: “connected—S1 C skeleton player
+palmer@ 192,12.12.1: connected—B1 Richard Palmer
+
+fortran/fplayer: verified—S2 .
+playdir/refuser: started —B2
+fortran/pplayer: '  started—S3
+
+playdit/pq: non-existent or non-readable
+playdir/of: verified —B3
+
+This example shows that two network players connected, and then the monitor tried to Start five
+local players, though one of these (playdit/pq) didn't actually exist. The numerical address given
+for the network players is the actual internet address from which they connected. For the local
+players ‘started’ implies that a pipe-based player was successfully started, while 'verified' implies
+that a file-based player was checked for existence and accessibility, Players are tentatively
+assigned identification numbers ($1, B1, etc), thou gh they may be renumbered later,
+
+At a second stage of the startup phase players are told the game parameters and asked if they want
+to play. Any refusals produce messages in the logfile such as:
+
+B2 refused to play | — nrounds unacceptable
+— maxtokens unacceptable
+
+This will then cause renumbering of the remaining players before the main listing of players that
+appears in the listfile,
+
+Double Auction Tournament -42. Participant's Manual
+dd
+
+: es
+
+eal)
+
+ERROR MESSAGES
+Error messages from the monitor are intended to be self-explanatory. Some typical ones are:
+
+%* error reading ‘ntimes' from ‘game’: non-digit found
+*# error reading 'ntokens’ from ‘game’: value too large
+** $1 died in INIT2 0 0 0—fatal error
+** B1 died in BIDOFF 1 1 1—quit
+** SQ died in BUYSELL 1 2 8—connection broken
+
+" #* BQ died in BIDOFF 2 2 1—killed by operator
+*** no active buyers left—game ended
+
+Many of the messages show the step in which the error occurred, such as the ‘BUYSELL 1 2 8
+above, which means the buy-sell step at time 8 of period 2 of round 1. There are many possible
+reasons for a player dying, and the difference between reasons like ‘read error’, ‘connection
+broken’, ‘write error’ and ‘unresponsive’ should only concern an expert, in each case the player
+program stopped responding properly. The reason ‘fatal error’ means that the player program
+itself detected an error and called the ‘error’ subroutine. An interrupt can also cause this error.
+The reason ‘quit' means that the player intentionally quit the game; this is normally only used by
+the human interface. ;
+
+LOG INFORMATION
+
+If the logfile and listfile are not identical, the logfile shows the progress of the game as it runs.
+More information is shown if the logfile is defaulted to stdout than if it is sent to a named file. In
+the stdout case an example is: ;
+
+DA game 1745 Mon Jun_5 17:06:22. 1989
+
+files: out1745 - game players
+Initialization-1
+Initialization-2
+Round 1
+period 1
+BRR EK ORR HER Re HR RE He]
+
+_ period 2
+BHR CH RR RR RR eg]
+Round 2
+period 1
+So Se ee ee ea S|
+
+period 2
+RE OR RB I RR co AE te]
+
+End of game 1745—output is in out1745
+
+The heading and ‘files:’ line are identical to those in the listfile. The ‘Initialization’, ‘Round’, and
+'period' lines log the major divisions of the game.
+
+The lines with asterisks are produced one symbol at a time if output is to stdout. One symbol is
+shown for each bid-offer and each buy-sell step. For a bid-offer step a * is shown if there were
+any bids or offers; otherwise a. is shown. For a buy-sell step a < is shown for a buy transaction,
+a » is shown for a sell transaction, and a - is shown if no transaction occurred, A lis shown when
+no more mutual profit can be made.
+
+Double Auction Tournament +43- Participant's Manual
+CHAPTER 5; THE PLAYER PROGRAMS
+
+This chapter explains how to use the player programs, including the human interface. Compilation
+instructions are not included here; see the appropriate README files and makefiles,
+
+5.1 Starting the Player Programs
+INTERNET-BASED PLAYERS
+
+To start an internet-based player (including a human/internet player), simply run the program.
+There are no options or arguments (unless you have the full networking software, in which case a
+hostname may be specified as an argument). The human/internet player will ask for your name
+(maximum 30 characters) and whethér you want to be a buyer or a seller. If the program
+successfully connects to the monitor you will then receive one of four types of message from the
+monitor: .
+
+1, A description of the game schedule in a box of *'s, followed by the time at the monitor's
+location. This means that no game is presently starting; try again at the appropriate time.
+
+2. A "Waiting for ..." message. This means that a game will start as soon as the condition is
+satisfied. Further waiting messages will be sent every 30 seconds until the game starts or
+is abandoned. :
+
+3. A "Game starting" message. ‘This means that your connection satisfied the condition for a
+game, which is now starting.
+
+4. + A"Sorry, ..." message. This means that a game is about to start, but that you cannot join it
+for the reason given. °
+
+Note that all messages before the beginning of the game itself are sent to stderr, not stdout. This
+implies for example that the messages will come to the screen even if you redirect the main (stdout)
+output to a file, as may be appropriate for a game run in background. If you start up several
+players, with all but one in background, you will see multiple copies of the messages, one from
+each player. ;
+
+It may be useful on a Unix system to copy the main (stdout) output to a file as well as sending it to
+the screen. Pipe the output into ‘tee’ to do this. E.g.,:
+
+di | tee output
+
+Here 'di' is the name of the internet player, and ‘output’ is the name of the output file.
+
+. PIPE-BASED OR FILE-BASED PLAYERS
+
+You do not normally run pipe-based or file-based player programs by themselves, but expect the
+
+monitor to do so. The "monitor" chapter of the documentation explains how this is done,
+
+The human interface is used like the machine players except for the following: .
+
+a. The -h flag is required in the playerfile.
+
+b. The monitor's listfile output must be sent to a file, not the screen. Specify the filename on
+
+the command line. E.g., "dmon outfile."
+
+Double Auction Tournament -44- Participant's Manual
+Using the human player via DANI is not recommended. Instead make an inetbased version of the
+human player itself (with DISPLAY turned on in define.h). If you DO use a human player via
+DANI, you must use the -a and -q flags if pipebased (-f and -q if filebased).
+
+If in doubt as to whether the players are working correctly it may be useful to ran them directly. A
+useful test is to send the player the 15 character message ...31.1234....0 (where each . represents
+one space); the response should be ...31.1234 (possibly with one extra leading space). For the
+pipe- based case the messages are simply sent to and from stdin and stdout. For the file-based case
+the messages must come from the file xxxx.in and are sent to xxxx.out, where xxxx is the player
+program's name. After performing this test in the pipe-based case you must abort the player
+program, or send it a nonsense message to make it abort.
+
+5.2 Explanation of human player and C-player output
+
+The skeleton players written in C can optionally display the game as it progresses. This is a
+compile-time option (see the README file and comments in the programs), and is mainly intended
+for use in the human player. It may also be useful with machine players, especially with internet-
+based communication, Note that using DANI is an alternative in this case however, and has a
+more compact output format. The only difference between the output of the human player and of a
+C-player with output display is the prompts and responses used with the human player, These are
+discussed separately below.
+
+The output display consists of initial headings, the detailed play of the game, and various
+summaries.
+
+INITIAL HEADINGS
+
+The first part of the output gives basic game parameters and a list of player numbers. For example:
+
+DA game 1760 Tue Jun_6 21:32:20 1989
+
+nrounds: 2 nperiods: 2 . ntimes: 50 "price range: 1-1000
+2 buyers: Bl. 501 B2 9999
+
+2 sellers: S1 502 82 0
+
+“You are seller $1, otherwise known as YOU
+
+The parameters and game-id (1760 in the example) should be self-explanatory. Note that the date
+and time is local to the player's location, which may be in a different time-zone than that of the
+monitor itself.
+
+The lists of buyers and sellers give their player numbers, or 0 if unknown or anonymous. These
+
+numbers may be useful in identifying strategies you have and have not played against. 9999 is
+used for a human player, 4
+
+Doubie Auction Tournament -45- Participant's Manual
+MAIN GAME
+
+The main game is displayed step by step. The format is less concise than DANT's, and takes 6
+lines per time step. For example, showing three time steps:
+
+--- round 1 -------------------- period 2 ------------—-----~- time 6 -------------
+cbid: (none) coffer: (none) tokens: 542 450 303 264
+Bl YOU/a Si/b S2/b
+bettered 183* 173 378* 395
+” no trade
+--- round ] -----------+4-06.- period 2 -------------~.------— time 7 ~------------
+cbid: 183/BL coffer: 378/S1 tokens: 542 450 303 264
+Bl/e YOU/a Si/b S2/b
+winner 218 247* 330* 333
+profit: 212 < = 30<
+--- round 1 ---~--------------- period 2 -------- pececnnnnns time 8 -------------
+cbid: (none) coffer: (none) . - tokens: — 450 303 264
+‘Ble YOU/b Ste 82/b
+lost tie ' 183* 183 3902 383%
+no trade
+
+The first line at each time gives the round, period, and time.
+
+The second line gives the current bid and offer, if any, and the player's tokens. Note that the
+owners of the current bid and offer are given if applicable. Note also that tokens that have been
+traded are replaced by dashes (-).
+
+The third line lists the player names (with "YOU" for the present player), with a lower-case letter
+showing which token they will trade next (a = first, b = second, etc.).
+
+The fourth line shows the bids and offers in the bid-offer step, withan asterisk marking the current
+bid and current offer. A current bid or offer carried over from the previous stép (in the absence of
+any new ones) would be shown with a # instead of a *. On the left is shown the disposition of
+your own bid or offer request if you made one. "winner" means you had the best (or equal best)
+oid or offer, and now hold the current bid or offer. "bettered" means that someone else had a
+better bid or offer. "lost tie" means that you had an equal best bid or offer, but lost the resulting
+random tie-break. ; .
+
+The fifth line shows the result of the buy-sell step. If a trade occurs it is shown by a pair of <'s for
+a buy or a pair of >'s for a sell. The price is shown under the current bid or offer that it derived
+from.. On the left is shown any profit that you made, or "no trade" if no trade occurred, or blank if
+a trade occurred in which you were not involved. "lost draw" means that you lost a random tie
+break involving other buyers or sellers (the same as you) who also made buy or sell requests.
+
+In either the bid-offer or the buy-sell line the left column can also show **ilegal** or **late#*,
+**illegal** means that the your response was illegal, such as a bid below the current bid, or a
+request to buy when there was no current offer. **late** means that you missed responding to
+one or more steps, so the actual response was to a previous step and was ignored. Note that if this
+occurs, subsequent information about the number of tokens traded (a, b, etc), and some summary
+information, may be incorrect because relevant information was missed, See the description of the
+variables in the skeleton programs for a more detailed discussion.
+
+Double Auction Tournament -46- Participant's Manual
+SUMMARIES
+
+At the end of each pericd a short summary appears:
+You made 3 trades, making a total profit of 286 in this period
+Summary of trade prices (* = yours):
+§38* 545 521* 535 313* 309
+
+The number of trades and the profit are just for the period that just ended,
+
+At the end of each round the number of trades and profit is summarized for the current player for
+each period of the round. For example:
+
+End of round 1 Sas =
+Summary: period trades profit
+1 3 286
+2 3 293
+total 6 579
+
+At the end of the whole game a final summary appears too:
+
+End of game 1760 =
+
+Total profit; 1186
+Efficiency: 109%
+
+The total profit is the total reported by. the monitor, If that differs from the amount computed by
+adding up the individual profits for each round, the message will look like:
+
+Total profit: 1186 (1037 accounted for)
+This can occur if the player was **late** and missed a transaction.
+
+The ‘Efficiency’ is the performance figure of merit reported. by the monitor; the ratio of actual profit
+to that expected if all trades occurred at the theoretical equilibrium price. Higher values represent
+
+- better performance.
+
+5.3 Prompts and Responses in the Human Player
+
+The previous section describes the display output of the human player besides the prompts and
+responses. Normally the human player asks for your decision once in each bid-offer and buy-sell
+step.
+
+There are two types of prompts:
+
+1. Prompts ending in a ? expect a substantive reply, either a number or a 'y' for yes or 'n’ for
+no.
+
+2, Prompts ending in a > are merely informational, and expect only a carriage return in
+response.
+
+At either of these types of prompt, various options or commands can be specified instead of the
+expected response. The prompt is then repeated.
+
+Double Auction Tournament -47- Participant's Manual
+BID-OFFER PROMPTS
+In a bid-offer step the usual prompts are:
+
+bid [n]}? for a buyer
+or offer [n]? for a seller
+
+These invite you to type in a bid or offer value respectively. If you don't want te make a bid or
+offer you can type an n (none), or just press return. The '[n]' reminds you that the default action is
+‘none’, ,
+
+Instead of one of the above prompts you may receive one of the informational prompts:
+
+nothing to trade if you've traded all your tokens
+or unwise to bid if the current bid is above your next token
+or unwise to offer if the current offer is below your next token
+
+The last two ‘unwise! messages only appear if you set the 'u' option discussed below.
+BUY-SELL PROMPTS
+In a buy-sell step the usual ? prompts are:
+
+buy at xxx [n]? for a buyer
+or sell at xxx [n]? for a seller
+
+Here xxx is the current offer or current bid price respectively. .Your response should be y for yes
+orn for no. The default if you just press return is shown in square brackets (n for no in the
+example, but this can be reversed with the ‘a’ option).
+
+Instead of one of the above prompts you may receive one of the followin g informational prompts:
+
+not bidder> for a buyer not holding the current bid
+or not offerer> fora seller not holding the current offer
+or nothing to buy> for a buyer when there's no current offer
+or nothing to sell> for a seller when there's no current bid
+or nothing to trade> if you've traded all your tokens
+or unwise to buy> for a buyer who'd make a loss by buying
+or unwise to sell> for a seller who'd make a loss by seliing
+
+The last two ‘unwise’ messages only appear if you set the 'y' option discussed below.
+
+OPTIONS AND COMMANDS
+
+At any prompt you may set or reset any of the following options. To set them simply type their
+letter. To reset them type a - and then their letter. Options can be concatenated, and a - applies to
+all subsequent options. For example, u-aw would set u and reset a and w.
+
+u_—prevent ‘unwise’ choices likely to lead to a loss. This enables the ‘unwise to ...' prompts
+detailed above, and refuses to accept any bid or offer that would result in a loss if accepted.
+
+a accept bids or offers by default on the buy-sell step. This makes y (yes) the default for the
+‘buy at ...' and ‘sell at ...' prompts.
+
+Double Auction Tournament ~48- Participant's Manual «
+
+il
+ei
+
+my
+
+fast. Removes the wait for a carriage return (or timeout) at all '>' prompts, The message is
+shown without the '>', but no response is needed or allowed. Note that this may lead to
+rapid scrolling of the game on the screen, and does not let you enter further options or
+commands until a ? prompt next occurs.
+
+wait. This turns off the automatic timeout and waits for ever for your response. On most
+systems the human player types one '.' every second (or a '' in the last five seconds) and
+then defaults your response (as if you had just pressed return) after a certain time. If you turn
+this off with the w option you may exceed the time that the monitor allows for your response,
+which may lead to a **late** disposition or even to you being ‘killed’,
+
+Pass. This causes every prompt (both ? and > types) to be defaulted for the rest of this
+period. Note that P is upper-case.
+
+The P option is reset at the start of each period but the other options are not.
+
+Besides the above options which may be toggled on or off, the following commands may be given
+to any prompt:
+
+quit Quits the game, which then continues without you.
+
+help Prints a summary of these options and commands.
+
+?
+
+t
+
+$
+
+h
+
+Tells you what you can do in response to the current prompt.
+Shows your token values and the current bid and offer values.
+Shows the transaction prices so far in this period.
+
+Shows a ‘history’ summary of the last few steps. The output is described in more detail
+below.
+
+5.4 History Display in the Human Player
+
+The human player can display a compact summary of the previous N steps in the current period,
+where N is a compile-time option. Use ‘h’ in response to any prompt to obtain the history display.
+The output combines each bid-offer and buy-sell step into a single line. For example:
+
+t YOU B2 $1 $2 price
+1 400* 321 514 510*
+2 435*> 433 476*> 477 435
+3 400* 338 514* 518
+4 430 436*< ATOF 484 479
+5 339% 514* 527
+6 390*> 383 488 463*> 390
+7 350* 336 514 510*
+§ 399% 485 472*
+9 425*> 423 459 446*> 425
+12! 395 415%< 470 469%< 469
+13 350* 330 514* 523
+14 380* 378 488* 497
+15 * 392 399% 470* . 478
+
+Double Auction Tournament -49. Participant's Manual
+The leftmost column shows the time t. This may be shown as a ? if unknown because of a ‘late’
+condition. The time column may be followed by a !, calling attention to the fact that some steps
+were missed, or a *, meaning that the information on this line is incomplete, Late responses can
+cause either of these conditions, but * is also normal on the last line if only the bid-offer step has
+occurred so far.
+
+The columns for each player show the bid or offer values, followed by a * marking the current bid
+or offer, and a < for a buy or a > fora sell. The actual transaction price is repeated in the last
+column. A # is used instead of a * for a current bid or offer that was carried. forward from a
+previous bid-offer step.
+
+Double Auction Tournament ~50- Participant's Manual
+al
+
+CHAPTER 6: DANI
+
+This chapter explains how to use the Double Auction Network Interface (DANT), and how to
+interpret its output. Compilation instructions are not given here; see the README file in DANI's
+source directory.
+
+6.1 Communication Methods
+
+DANI acts as an interface between a monitor on the internet-—normally the Santa Fe Token
+Exchange (SFTE)—and a local player. DANI communicates with the monitor via sockets over the
+internet, and with the player program by one of the following methods:
+
+pipe-based DANI starts up the player program once (as a child process) and attaches pipes
+between it and the player's stdin and stdout.
+
+arg-based This is just like pipe-based except that the pipes are attached to special descriptors
+specified as arguments on the player's command line instead of using stdin and
+stdout. For C players only. Useful for players that need to use stdin and stdout
+themselves.
+
+file-based DANI starts up the player program for each step of the game, reading and writing
+files for communication. .
+
+user-based DANI does not start up the player itself, but reads and writes messages to the player
+on its stdin and stdout. Used for players on remote machines (e.g., dial-up lines)
+that can talk to DANI directly.
+
+There is considerable overlap between this chapter and chapter 5, because DANI's display and
+
+startup messages are similar to those of the internet- based C players.
+
+6.2 Starting DANI
+
+Before statting DANI (except to inquire about the current status at the SFTE), you must compile
+and link your player program as well as DANT itself. Then start DANI with a command of the
+form:
+
+dani [options] [playername] [hostname]
+The options are explained below. The other parameters are:
+
+playername —_ the name of the player program to be started. This must be in the current working
+directory (though DANI needn't be). 'playername' cannot be specified if you use
+the -u option, Otherwise if you omit it, DANI just inquires about the current status
+at the Santa Fe Token Exchange or elsewhere.
+
+hostname the name of the host to connect to on the internet. This only works if you have the
+full networking software, which is not normally distributed. Otherwise the host is
+taken as sfi.santafe.edu, for the SFTE. ‘hostname’ must be the second
+argument (after playername) unless the -u option is used. See also the -h option
+
+below.
+
+Double Auction Tournament -51- Participant's Manual
+OPTIONS
+-b Insist on being a buyer.
+-S Insist on being a seller.
+
+If neither -b-nor -s is specified the monitor will assign your role as buyer or seller.
+
+-p Use pipe-based communication.
+
+“a Use arg-based communication.
+
+-f Use file-based communication,
+
+-u Use user-based communication. This inhibits display or log output unless
+
+redirected with -O.
+
+If none of -p, -a, -f, or -u is specified the. default depends on a choice made when dani was
+compiled.
+
+-n name Specifies the name of the player. If this is not supplied DANI will ask for it with
+"Enter your name:."
+-h hostname An alternative way of specifying a hostname if you have the full networking
+software.
+-d Tums on display of the game as it progresses. -
+-q Turns off display of the game (‘quiet’). ;
+
+If neither -d nor -q is specified the default depends on a choice made when dani was compiled. -
+
+-0 output Sends the display or log output to file ‘output’. Defaults to stdout. Redirection
+with > may also be used, but -o may be useful if the player program also ,
+produces stdout output (in which case you must use -a or -f). -o MUST be used if
+you want to produce display or log output with user-based (-u) communication. id
+
+-l Log messages. For debugging only, Implies -q. Messages generated by DANI
+itself are prefixed by a *,
+
+Lisette
+
+-k Don't send KILLED messages to player, For debugging in the filebased case—to
+" prevent the player deleting its files,
+
+After starting and testing the player, DANI will ask for your name (maximum 30 characters) unless
+you already specified with the -n option, or are only inquiring about the status (no playername
+given). Then, if it successfully connects to the monitor, you will then receive one of four types of
+message from the monitor:
+
+1. A description of the game schedule in a box of *'s, followed by the time at the monitor's
+location. This means that no game is presently starting; try again at the appropriate time.
+
+2. <A “Waiting for..." message. This means that a game will start as soon as the condition is
+
+satisfied. Further waiting messages will be sent every 30 seconds until the game starts or is ul
+abandoned.
+
+Double Auction Tournament -52- Participant's Manual
+a
+
+3. <A "Game starting" message. This means that your connection satisfied the condition for a
+game, which is now starting.
+
+4. A“Sorry,..." message. This means that a game is about to start, but that you cannot join it
+for the reason given.
+
+Note that all messages before the beginning of the game itself are sent to stderr, not stdout or the -o
+file.
+
+6.3 VAX/VMS Notes
+
+DANI should work correctly 6n a VAX/VMS system as long as the Wollongong WIN/TCP
+networking software is available. The treatment of file-based players is straightforward and should
+cause no problem, but may be very slow on a busy system. Pipe-based players are much more
+efficient, and thus faster, but more fragile, The player is started up as a sub-process of DANI, and
+communicates with it via VMS "mailboxes." If something goes wrong it is possible for the player
+subprocess to continue running (in a wait state) even after DANI exits or aborts. You can check
+for subprocesses with the command "SHOW PROCESS/SUB"—the player sub-process is always
+called PLAYER. If you see PLAYER in the process tree, you can kill it with "STOP PLAYER.”
+DANI will refuse to run again if PLAYER already exists.
+
+Note that you must have the TMPMBX and NETMBX process privileges, and a non-zero
+subprocess quota, torun DANI. Most users will have these,
+
+Be patient when starting up DANI. VaX/V MS takes a relatively long time to start up a subprocess
+when the system is busy.
+
+6.4 Explanation of DANI's display output -
+
+DANT is able to display the progress of a game as it interfaces between the monitor and a player.
+This is enabled by the -d option and disabled by the -q option; it may or may not be the default, as
+fixed before compilation.
+
+DANT's display output consists of initial headings, the main game, and various summaries. The
+initial headings and summaries are identical to those of the internet-based C players, but the main
+game display is different.
+
+INITIAL HEADINGS
+
+The first part of the output gives basic game parameters and a list of player numbers. For example:
+
+DA game 1760 Tue Jun 6 21:32:20 1989
+
+nrounds: 2 nperiods: 2 ntimes: 50 price range: 1-1000
+2 buyers: Bl 501 B2 9999
+2 sellers: Sl 502 $2 0
+
+You are seller $1, otherwise known as YOU
+
+The parameters and game-id (1760 in the example) should be self-explanatory. Note that the date
+and time is local to DANI's iocation, which may be in a different time-zone than the monitor itself.
+
+Double Auction Tournament -53- Participant's Manual
+The lists of buyers and sellers give their player numbers, or 0 if unknown or anonymous. These
+numbers may be useful in identifying strategies you have and have not played against. 9999 is
+used for a human player.
+
+MAIN GAME
+
+Each period of a game consists of headings and then one line for each bid-offer and each buy-sell
+step. For example:
+
+oe ‘round 1 --------------- period { ------------------ tokens: 323 457 506 537 -------------------
+t profit Bl B2 YOU 82 price
+1 winner 392* 380 602* 614
+no .
+2 winner 455 465* 538% 543
+yes 215 <A <A 538
+3 winner 392 405* 602* 616
+no .
+4 bettered A65* 450 558 545%
+. <A ; <A 545
+5 bettered 392 400* 602 505*
+6 bettered 464 465* 553 546*
+7 winner 490* 480 521% 525
+no - 64 <B <B 521
+8 winner 392 400* 602* 609
+We iostde agg spe V0 hig ge
+17 bettered 511 512% 514. 513*
+18 winner 513* 513 512* 512
+yes 7 >C rC 513
+
+rr cc
+
+wenn ener enn tenn enmenn en nnnnmncn ns end of period 1 of round 1----------------~--------------------0-----0ee
+
+The heading line shows the round and period number, and the assigned token values. Note that
+these token values are usually scrolled off the screen as the game progresses, and may be worth
+writing down,
+
+Bid-offer steps are labeled on the left with the time; buy-sell steps are unnumbered. A vertical bar
+(|) always appears between the buyers and the sellers, and a period (.) appears in the column for
+the current player ("YOU") in each buy-sell step; these are useful after the headings have scrolled
+off the screen.
+
+Each bid and offer is shown in a bid-offer step, with asterisks (*) marking the current bid and
+offer. If there is no new bid, but a previous current bid is still outstanding, it is shown in. the
+bidder's column with a # instead of a *, and similarly for offers.
+
+To the left of the bids in a bid-offer step is shown the disposition of the current player's
+bid/offer/none request. ‘winner’ means that the bid or offer was the best (or equal best) and thus
+became the current bid or offer. ‘bettered’ means that a better bid or offer was received. ‘lost tie'
+means that the bid or offer was equal best, but the current player lost the resulting random tie-
+break.
+
+Double Auction Tournament -54- Participant's Manual
+LA
+Cap
+
+| By
+
+feu
+
+Ina buy-sell step a transaction is shown by a pair of <'s for a buy, or a pair of >'s for a sell. The
+token traded for each player is shown by an upper-case letter (A = first, B = second, etc.), The
+transaction price is given in the rightmost column. This price column is omitted if there are the
+maximum number of players; the price is easily deduced from the preceding current bid or offer.
+
+To the left of the transaction information in a buy-sell step is shown the disposition of the current
+player's buy/sell/none request. 'yes' means that a buy or sell request was made and carried out.
+‘(yes)’ means that a buy or sell request was made, but was not accepted because another player
+aiso made a valid request and won the random tie-break. This is usually better than ‘yes’ if you are
+the current bidder or offerer, because the trade occurs at YOUR price. ‘no’ means that a buy or
+sell request was permitted but was not made, The space is left blank if no buy or sell request was
+
+permitted,
+
+If any profit was made it is shown in the profit column in the appropriate buy-sell step. Note that
+this can occur with a disposition of ‘yes’, ‘(yes)’, ‘no’, and even blank,
+
+The dispositions '**bad**" and '**late**' can appear in either step. "ek had**' means that the
+current player's response was illegal, such as a bid below the current bid, or a request to buy when
+there was no current offer. '**late**' means that the player missed responding to one or more
+steps, so the actual response was to a previous step and was ignored, Note that if this occurs,
+subsequent information about the token number traded (A, B, etc), and summary information
+described below, may be incorrect because relevant information was missed. See the description
+of the variables in the skeleton programs for a more detailed discussion.
+
+SUMMARIES
+
+At the end of each period a short summary appears:
+You made 3 trades, making a total profit of 286 in this period
+Summary of trade prices (* = yours):
+53g* 545 521* 535 513* 509
+
+The numuber of trades and the profit are just for the period that just ended.
+
+At the end of each round the number of trades and profit is summarized for the current player for
+each period of the round. For example:
+
+saat ececseec= End of round } ====ss-== SoSSSSSe
+
+Summary: period trades profit
+1 3 286
+2 3 293
+
+total 6 579
+
+At the end of the whole game a final summary appears too:
+
+SESE SSS SS SSS SSES= End of game 1760 = aos
+Total profit: 1186
+Efficiency: 109%
+
+The total profit is the total reported by the monitor. If that differs from the amount computed by
+adding up the individual profits for each round, the message will look like:
+
+Total profit: 1186 (1037 accounted for)
+
+Double Auction Tournament - -55- Participant's Manual
+This can occur if the player was **late** and missed a transaction.
+
+The Efficiency’ is the
+to that expected if all
+better performance.
+
+performance figure of merit reported by the monitor;
+trades occurred at the theoretical equilibrium price,
+
+the ratio of actual profit
+Higher values represent
+
+Double Auction Tournament -56- Participant's Manual
+
+Nemete ntnenet
+Bo aad
+
+Goes
+
+i
+
+CHAPTER 7: TOURNAMENT RULES AND REGISTRATION
+
+This chapter specifies the rules, parameter settings and entry procedures for the actual Double
+Auction tournament to be held in March 1990. The rules of the Double Auction itself are given in
+the Introduction chapter; this specifies the rules relating to tournament entries and the distribution
+of the $10,000 prize money. The structure of the tournament is also discussed. An entry form
+appears at the end of the chapter. .
+
+7.1 Tournament Rules
+
+1.
+
+The deadline for entries is March 1, 1990. Entries must be received at the Santa Fe Institute
+by 5 PM (MST) on this date to be eligible for inclusion in the tournament. If an entry
+conforms to all the rules listed below it will be accepted as a PLAYER in the DA tournament.
+If an entry has been submitted before the deadline and is found to violate one of the rules
+listed below, it will be returned to the entrant for revision and conditional acceptance
+provided the revised strategy is received before the deadline, Entrants will have at most one
+chance to submit strategies that conform to the rules. In the sequel we will refer to an
+accepted computer program (source and associated materials as described below) as a
+"player," and "entrant" as the human(s) who submitted it.
+
+A maximum of 100 players will be accepted. Of these, 70 will be accepted on a first-come,
+first-served basis starting on September 1, 1989 until the entry deadline of March 1, 1990.
+The remaining 30 slots have been reserved for selection by the tournament organizers to
+guarantee sufficient diversity in the types of strategies submitted. If the organizers do not use
+all 30 slots, those that remain will be allocated on a first-come, first-served basis as described
+above. A list of current entrants’ names and E-mail addresses is available by ftp in the
+"entries" file, or by request from the organizers, Entrants who wish to remain anonymous
+throughout the tournament can have their names appear as “anonymous” in the entries file.
+
+- A valid entry consists of |
+
+A. source code for the user routines in one of the skeleton programs, subject to additional
+restrictions listed below, and.
+
+B. a$10.00 entry fee payable to Santa Fe Institute, and
+
+C. oa signed, completed registration form (at the end of this chapter). .
+
+The user routines referred to in 3A are the 4 Strategy Routines and 8 optional Miscellaneous
+Routines listed in the "skeleton" chapter of the documentation, They must be accompanied
+by appropriate declarations and/or definitions of the variables and parameters, as required by
+the language used.
+
+The routines must be written in C, Fortran or Pascal arid must be compatible with the
+skeleton programs as provided in these languages.
+
+As an alternative to 3A, 4, and 5, users may submit source for a complete self-contained
+player program. This must: .
+
+A. Conform to the message-passing protocol described in the "messages" chapter of the
+documentation.
+
+Double Auction Tournament -57- Participant's Manual
+10.
+
+11.
+
+12.
+
+B. Be able to communicate using the PIPEBASED method with the monitor on a Sun-4
+system; this mainly requires that messages be read from stdin and written to stdout.
+
+C. Be supplied in source form in C, Fortran, or Pascal. Other languages may be
+considered, but only by prior arrangemient with the organizers,
+
+All players must be sufficiently documented by comments in the source, and optionally by
+additional written (or ascii text) materials. The documentation should include at least the
+following:
+
+A. The name, affiliation, and address of each author. These MUST appear in comments in
+the source, as well as on the entry form.
+
+A general intuitive description of what the strategy does.
+Definition of all significant variables and parameters, .
+
+References to any specific algorithms or nutnerical methods used.
+
+HOO Ff
+
+Description of the content and use of any extemal files needed or created by the
+program.
+
+F, Notes on any special requirements for compiling, linking, or running the program.
+
+We reserve the right to reject programs which we deem to be poorly documented or
+unnecessarily obscure. In such cases the authors will be invited to make improvements
+within a reasonable time before any final rejection. :
+
+Participants’ programs may create and use external files, which will be preserved from game
+to game, Each player program will have its own directory, and may only access files within
+that directory. Additional files may be submitted with a tournament entry, but must be
+adequately documented.
+
+Players must be runnable on a Sun-4 running SunOS 4.0. This means especially that only
+commonly available library routines should be used. Players will be checked for runnability
+upon receipt, and the organizers will make reasonable efforts to make any minor alterations
+necessary to suit local conditions, Ultimately however, we reserve the right to réject
+programs that we cannot run. Authors should contact the organizers if in doubt about the
+availability of library routines or language features at Santa Fe.
+
+There are no explicit CPU time, memory, or disk storage limits for player programs.
+However if a program is found to use greatly excessive amounts of any of the above
+resources (relative to what is used by othér players), the organizers reserve the tight to
+request the entrant to modify the program .so.that its requirements are more in line with other
+players or, as a last resort, to disqualify the program.
+
+Submitted players cannot be withdrawn or revised once submitted, except to satisfy the
+requirements these rules. Major changes in the player program will be prohibited once
+submitted.
+
+Although joint entries are permissible, at most one player will be allowed per entrant.
+Duplicate or plagiarized player programs will be disqualified; all submissions must be
+distinct.
+
+Double Auction Tournament -58-- Participant's Manual
+
+as
+
+13.
+
+14,
+
+15.
+
+16.
+
+17.
+
+18.
+
+19,
+
+Players are only allowed to use information
+A. explicitly passed to them by the monitor, or
+B. _ stored in their private files (optional).
+
+Different players may not communicate directly, and may not share files. Any attempt to
+violate these rules (in letter or spirit) will be grounds for disqualification.
+
+Both tournament entrants and non-entrants may use the Santa Fe Token Exchange (SFTE)
+for practice games if their hardware and software permits it. No guarantee of availability on a
+particular system or at a particular time is made, Traders on the SFTE may be either human
+or robot traders. There will be no cash profits paid for trading on the SFTE, and the
+tournament will be run independently of the outcome of any SFTE games,
+
+Traders playing as local (non-network) players on the SFTE will be selected from those
+developed at SFI. Different selections may be made at different times of day, Participants
+are invited to submit their programs for this purpose, though no guarantee of using them is
+made. The organizers guarantee the confidentiality of programs submitted for local SETE use
+(by using only the binary executable version of the program in an inaccessable file),
+
+Prize money totaling approximately $10,000 will be paid to participating entrants in
+proportion to the total trading profits earned by their player programs in all tournament games
+in which they play (see description of parameter settin gs below). ;
+
+In order to encourage entrants to develop trading strate gies that perform well in a wide variety
+of environments, the parameter settings in the Double Auction tournament games will be
+systematically altered. In the tournament games the base token values (see the ‘game' file)
+will normally be set to zero, so the relevant parameters consist of the following 10 variables
+(for more detailed definitions, see chapters 1 and 3, and ‘game' file):
+
+NTOKENS number of tokens assigned to each trader
+NBUYERS number of buyers
+NSELLERS number of sellers
+
+NROUNDS number of rounds in DA game
+NPERIODS number of periods per round
+
+NTIMES number of bid/offer and buy/sell-steps per period
+RANI uniform random token generator upper bound 1
+RAN2 uniform random token generator upper bound 2
+RANS3 uniform random token generator upper bound 3
+RAN4 uniform random token generator upper bound 4
+
+The meanings of RANI, ..., RAN4 are discussed in detail in rule 25 below.
+
+Games in the Double Auction Tournament will be selected from a fixed number of
+environments, E(i}, i=1,...,1, Each environment E() is a complete specification of the 10
+DA game parameters listed in 17. All the above parameters are passed to each player
+program at the start of each DA game (except that RAN1-4 and the token generation method
+may be withheld in a few environments). This guarantees that players have common
+knowledge about the environment, a game-theoretic consideration.
+
+The specific environments used will be chosen by the organizers in advance of the actual
+tournament, guided in part by scientific objectives and in part by a desire to give all entrants
+an equal opportunity to do well in the tournament. However information on I and E(i) will
+
+Double Auction Tournament -59- Participant's Manual
+20.
+
+21,
+
+22,
+
+23.
+
+24,
+
+not be released to entrants before the tournament, to discourage them from "tuning" their
+programs to specific environments.
+
+For éach environment E(i), a total of NG) DA games will be played, distributing a share AQ)
+of the $10,000 prize money with
+
+A(1)+ ... AC) =.$10000.
+
+The number of games NG) will be chosen sufficiently large to average out variations in
+profits due to random choices of player matchings, token values, and tie-breaking rules.
+
+In each of the N(i) DA games in environment E(i), entrants’ programs will be randomly
+chosen- without replacement- from the pool of valid players for inclusion in the current DA
+game, If a player program is drawn that cannot fill the position (e.g., if the entrant only
+wrote a "buyer" program but was selected to play the role of seller") the the program is
+withdrawn from the pool and another player is picked. Players which have already been
+selected are also withdrawn from the pool,
+
+Draws will continue in this way until the requisite number of buyer and seller programs are
+selected to play in the current DA game. This implies in particular that no program will play
+more than once in a single DA game.
+
+If TP(i,j) is the total token profit earned by a player j in the subset of the NG) games in -
+environment E(i) in which it participated, then the actual dollar payment for that environment,
+DPii,j), is given by:
+
+DP(i,j) = cCMTPG))
+
+where c(i) is the conversion ratio between token profits and dollar profits. The total dollar
+payment to entrant j in the entire tournament is then simply the sum over each of the I
+environments, DP(1,j) + .... + DP(,j).
+
+The conversion ratio c(i) between token profits and actual dollar payments will be set in each
+environment E(i) to satisfy the following equation:
+
+A@) = c(i) TSG)
+
+Here TS(i) is the total surplus of the N@) games in environment E(i). In a single game the
+surplus is geometrically the area between the implied supply and demand curves, to the left of
+the point where they intersect, and would be the total profit if all trading occurred at the
+theoretical competitive equilibrium price. TSG) will be calculated by summing this surplus
+over the N(i) games in environment E(i).
+
+Since the conversion ratios c(i) will thus be determined a priori, the total dollar payment to
+participants may not be exactly $10,000, but is expected to be within a few percent of that
+figure.
+
+Trading programs have the right of refusal. Thus, entrants do not have to write strategies to
+play in all possible environments. For example an entrant may submit a program that only
+plays the role of buyer. Of course, since the expected profit in any given game is positive, an
+entrant's tournament earnings will be reduced in proportion to the fraction of games in which
+their program is unable to play.
+
+Double. Auction Tournament -60- Participant's Manual
+Ta
+
+d
+
+25. Token values are represented by TG,k,D, where j indexes the player, k indexes the token
+number, and 1 indexes whether the player is a buyer or a seller. Tokens will normally be
+randomly generated according to
+
+T(,kl) = A + BQ) + Ck) + DGD
+where ,
+
+A=Ul[0,RAN1],
+
+Bd) = U[0,RAN2],
+C(k,l) = U[0,RAN3],
+DG.k,]) = Ul0,RAN4].
+
+Here U[0,R] denotes a uniform random variable on the interval [0,R], Random variables A,
+BC), C(k,l), and D(j,k,l) are drawn independently of each other and independently for
+distinct indices (j,k,1).
+
+RANI], ..., RAN4 are passed to the trading strategy using the 'gametype’ variable; sce
+definition of 'gametype' in section 3.2 "Public Constants" of chapter 3. Note that due to
+technicalities of the software design, no token value is allowed to exceed 8000. This implies
+that for very large settings for RAN(i), i=1,...,4 the actual distribution is truncated. In the
+tournament we will not choose any values for RAN() i=1,...,4 that yield truncated
+distributions.
+
+In a few environments, representing not more than 33% of the total available profit, the
+tokens may be generated by another method not revealed to the players, This will be
+indicated by gametype = 0, ; . . :
+
+26. The organizers expect entrants to obey the spirit as well as the letter of the above. rules to
+produce strategies that exhibit "reasonable trading behavior.” In the event that certain
+‘Strategies are found to behave in a grossly unreasonable way (e.g., purely random
+‘strategies, or ones designed to maximize losses) or in a way that has not been explicitly
+covered in the above rules, the organizers reserve the right to exclude the deviant strategies
+after giving the entrant an opportunity to revise the strategy to produce more. reasonable
+behavior,
+
+7.2 Registration Form
+
+Submit a printed copy of the following form by mail, A copy sent by electronic mail or by fax may
+be used to establish a tournament entry, but a printed copy with signature(s) and entry fee must
+follow promptly.
+
+If your strategy has been developed by more than one person, submit only one trading strategy and
+entry fee, but include separate entry forms for each co-author,
+
+Send forms to:
+
+DAT
+
+Santa Fe Institute
+
+1120 Canyon Road
+
+Santa Fe, New Mexico 87501
+Phone: (505) 984-8800
+
+Fax: (505) 982-0565
+
+E-mail: dat@sfi.santafe.edu
+
+Double Auction Tournament -61- Participant's Manual
+Santa Fe Institute's
+DOUBLE AUCTION TOURNAMENT
+REGISTRATION FORM
+
+I hereby register my entry for the Double Auction Tournament to be held at the Santa Fe Institute in
+March 1990. My entry consists of
+
+1) _ This form, completed and signed.
+
+2) The entry fee of $10.00 (check or money order in U.S. currency only). Make checks
+payable to "Santa Fe Institute."
+
+3) Source code for a computer trading strategy according to the tournament rules. Check one:
+
+5 25-inch DOS disk enclosed (plain ascii file(s))
+35-inch Macintosh disk enclosed (TEXT format)
+Sent by electronic mail to "dat@ sfi.santafe.edu"
+
+- Submitted by other means: ;
+
+4) Other: (check those that apply—all are optional)
+
+__. written documentation
+_ special instructions for compiling/linking/running
+_ auxiliary files needed by program
+
+I understand that this tournament is part of a research project to gather scientific data to improve
+our understanding of the market mechanism. { have read and accept the tournament rules that
+specify the form of valid computer program entries, and describe how the approximately $10,000
+
+prize money will be distributed to tournament participants.
+
+By submitting my trading strategy, Iam giving researchers at the Santa Fe Institute the right to use
+it for scientific purposes in applications and experiments of their choice after the Double Auction
+tournament is held in March 1990. In particular, I grant them the right to describe my strategy in
+published reports, although I may choose not to be identified as the author of my trading strategy.
+
+Signed Date
+
+Name
+
+Affiliation
+
+Address
+
+Phone E-Mail
+
+Do you wish to be identified as author of your strategy in published reports (and public list of
+entrants)? __ yes _ no
+
+Did you use SFTE to develope or refine your strategy? yes ___n0
+If yes, did SFTE help you improve your strategy? __ yes no
+
+Double Auction Tournament “62+ Participant's Manual
+teed
+
+tee et omg
+erie tolh Ata
+
+5
+toa cm
+
+7 we ae at
+Toast td
+
+AL
+Eunos sigy!
+
+a
+lois
+
+29
+
+a
+ys
+
+Ty
+at
+|
+3
+
+CHAPTER 8: THE MESSAGE-PASSING PROTOCOL
+
+This chapter gives technical details of the message-passing protocol which is used for
+communication between the player programs and the monitor program, It is not needed by
+participants who base their programs on a skeleton program.
+
+8.1 Messages and message packets
+
+The tournament involves a central monitor program and a number of competing player programs.
+The player programs communicate only with the monitor, not directly with each other. All
+communication is performed by sending and receiving simple messages.
+
+A message consist of a single line containing a sequence of integers. Each integer is right justified
+in a 5-column field, blank filled on the left. A typical message might be
+
+wl4..350...-1
+
+where each . represents a space. All integers lie in the range -999 to 9999 to leave at least one
+blank between columns. -
+
+The first integer in each message indicates the message type. Here we name such message types
+according to the code table in Section 8.6. Thus a typical message is written:
+
+OFFER offer-price  offerer
+
+The capitalized name OFFER stands for the unique integer code for this message type (16 from
+Section 8.6), whereas the lower-case names 'offer-price’ and ‘offerer' stand for parameter values
+that are conveyed by the message.
+
+Each communication from a player program to the monitor consists of a single message with one
+parameter (i.e. two integers in all). In some cases the parameter is unused and is set to 0.
+
+Most communications from the monitor to a player program consist of several messages called a
+message packet, The individual messages all have 2 parameters (i.e, 3 integers in all). In some
+cases the second parameter is unused and is set to 0.
+
+In the networked version of the game, in which the monitor and player programs may be on
+different machinés, there are some initial pre-game messages exchanged before the main game
+begins. These pre-game messages are not purely numeric and do not obey the above conventions.
+They are described in Section 8.4.
+
+Double Auction Tournament -63- Participant's Manual
+8.2 Order of message packets
+
+The following table shows the sequence of messages in a game:
+
+Step Monitor packets Trader messages
+Initialization Initialization-1
+- ACCEPT or REFUSE
+Initialization-2
+READY
+Round Round )
+READY )
+)
+Period Period ) )
+READY ) )
+) )
+Bid-offer Bid-offer ) ) dk
+BID or OFFER or NONE ) di)
+Bid-offer result ) 3
+yi) )
+Buy-sell Buy-sell ) )} )
+BUY or SELL or NONE } ) )
+Buy-sell result ) ) )
+End End-of-game
+
+i, j, and k show the number of times each group is repeated:
+i= ntimes
+j = nperiods
+k = nrounds
+
+The center and right columns show the message packets and messages in each step, reading down
+the page in order, The game may be divided into 6 types of steps, as shown in the left column.
+Each game has one initialization step and one end step. Between these there are ‘nrounds' rounds,
+each consisting of one round step and then ‘nperiods' periods. Each period consists of one period
+step and then 'ntimes' alternating bid-offer and buy-sell steps. These steps are described in detail
+in the remaining sections of this document. Appendix B provides a summary of all steps and their
+messages.
+
+The center column shows the message packets sent by the monitor to the player programs. These
+may be either single or multiple messages, as detailed below.
+
+The right-hand column shows the messages sent by the player programs to the monitor. The
+
+messages shown are alternatives. In a bid-offer step, for example, each player program is
+expected to send either a BID message or an OFFER message or 2 NONE message.
+
+Double Auction Tournament -64- Participant's Manuai
+vd
+
+8.3 Individual Steps of a DA game
+
+Initialization step
+
+The initialization step occurs once at the start of a game. It consists of
+
+1. An initialization-1 packet from the monitor that provides the general parameters for the game;
+
+2. Aresponse from the player program that either agrees to play (ACCEPT) or drops out at this
+stage (REJECT); .
+
+3. An initialization-2 packet from the monitor that provides more specific information about the
+game and gives parameters particular to each player;
+
+4, AREADY response from the player program when it is ready to play.
+
+INITIALIZATION-1 PACKET
+
+The first initialization packet gives general information about the game. The following messages
+will be sent in order:
+
+TYPE protocol monitor
+GAME gaine-type game-id
+LENGTH nrounds 0
+LENGTH nperiods ntimes
+‘TOKENS max-tokens 0
+NUMBER max-buyers max-sellers
+ROLE role ~ timeout
+
+The variables have the following meanings:
+
+protocol
+
+monitor
+
+game-type
+
+game-id
+
+nrounds
+nperiods
+
+ntimes
+
+Specifies the version of the message-passing protocol being followed. This should
+match that of the player programs. protocol = 5 for the version described in this
+document.
+
+Specifies the version of the monitor in use. This can be ignored by participants.
+
+Used to identify different types of games that will be played, conveying the values
+of the token-generation random number parameters. See the gametype variable in
+chapter 3 of the documentation for details.
+
+Provides a unique identification for this particular game. game-id will be increased
+for each game played.
+
+Specifies the maximum number of rounds.in the game, Maximum 20.
+Specifies the maximum number of periods in each round. Maximum 5.
+
+Specifies the maximum number of time steps in each period. In each time step there
+is first 4 bid-offer step and then a buy-sell step. A period will never be terminated
+early (before ntimes time steps have been played) unless no bids, offers, buys, or
+sells are occurring, and no mutually profitable trades could be made. Termination
+will no necessarily occur in such a case. Maximum 400.
+
+Double Auction Tournament -65- Participant's Manual
+max-tokens Specifies the maximum number of tokens that any player will be allotted in any
+round of this game. Maximum 8. A maximum of 4 will be used in the tournament,
+
+max-buyers Specifies the maximum number of buyers in this game; the actual number (given in
+the initialization-2 packet) may be less because some players may drop out after this
+step. Maximum 20.
+
+max-sellers Specifies the maximum number of sellers in this game; the actual number (given in
+the initialization-2 packet) may be less because some players may drop out after this
+step. Maximum 206..
+
+role Takes one of two values, and should match the type of player program it is sent to:
+I For a buyer.
+2 For a seller,
+timeout Specifies the conditions under which the monitor will timeout a player in any step:
+0 Timeout occurs after a short time, which may vary from step to step.
+
+Governed by the timefactors in the monitor's game file.
+
+9999 No timeout because the player was given the -w flag in the monitor's player
+file. The monitor will wait indefinitely for the player. other Approximate
+number of seconds until timeout. ‘This is the timeout value from the
+monitor's game file. When a player is timed out in a bid-offer or buy-sell
+step it is given a “late" (-2) status when it next does respond, The player is
+terminated if it times out in any other step, or is not responding at the end of
+a period.
+
+FIRST RESPONSE MESSAGE
+The player program must respond to the initialization-1 packet with one of the following messa ges:
+
+‘ACCEPT player-number
+or REFUSE reason
+
+In the first case the player program agrees to play the game, and should not drop out at any future
+stage. In the second case the program refuses to play and gives a reason; it should then exit
+immediately,
+
+player-number Identifies the particular player program. Should be unique for each player.
+Use the value assigned ta you, or 0 if a correct value is unknown. 9999 is
+normally used for a human player.
+
+reason A reason for refusing to play. Possible values are:
+
+I protocol is unacceptable.
+
+2 game-type is unacceptable.
+
+4 nrounds is unacceptable.
+
+8 nperiods is unacceptable.
+
+16 ntimes is unacceptable,
+
+32 max-tokens is unacceptable.
+
+64 max-buyers of max-sellers is unacceptable.
+128 role is unacceptable.
+
+256 timeout is unacceptable.
+
+<O Other program error or probiem.
+
+Double Auction Tournament -66- Participant's Manual
+Several of the values 1--256 may be added together if multiple conditions
+apply.
+
+Double Auction Tournament -67- Participant's Manual
+INITIALIZATION-2 PACKET
+
+The second initialization packet gives specific information about the game and the player. The
+following messages will be sent in order:
+
+NUMBER nbuyers nsellers
+BUYERS . number-1 number-2
+BUYERS number-3 number-4
+SELLERS number-1 number-2
+SELLERS number-3 number-4
+LIME TS minprice maxprice
+PLAYER id 0
+
+The variables have the following meanings:
+
+nbuyers The actual number of buyers.
+nsellers The actual number of sellers,
+number-n The player-number of buyer or seller n. Enough BUYERS messages are supplied
+
+to give the player-number of each buyer. Enough SELLERS messages are supplied
+to give the player-numbe of each seller. If the number of buyers or sellers is odd,
+the last number-n parameter will be 0. Any or all of the other number-n parameters
+may be zero if the appropriate value is unknown or the players are anonymous.
+
+minprice The minimum price value allowed. Minimum 1,
+maxprice The maximum price value allowed. Maximum 9999.
+id Your own identification number, between 1 and nbuyers if you are a buyer, and
+
+between 1 and nsellers if you are a seller. Players are referred to during the game by
+these identification numbers, not by their player-number.
+
+SECOND RESPONSE MESSAGE
+
+The second response message just consists of an acknowledgement when ready:
+READY id
+
+id must be your correct identification number.
+
+Start of round step
+
+A start of round step occurs at the start of each round of the game. It consists of:
+
+1. <A round packet from the monitor, giving the number of the current round, and token values
+for the round;
+
+2.  AREADY response from the player program when it is ready to continue play.
+
+Double Auction Tournament -68- Participant's Manual
+ROUND PACKET FROM MONITOR
+‘The round packet consists of the following messages.
+ROUND r ntokens
+PRICES . pricel price2
+PRICES price3 priced
+The variables have the following meanings:
+rT The number of this round: r = 1, 2, ..., nrounds.
+ntokens The number of tokens you are given for this round.
+pricel—4 Your redemption values, in decreasing order for a buyer, and in increasing order
+for aseller. There will be ntokens such values in all (shown as 4 here), given in as
+many PRICES messages as needed. The last parameter of the last PRICES
+message will be 0 if ntokens is odd.
+RESPONSE
+
+The response message just consists of an acknowledgement when ready:
+
+READY id
+
+id must be your correct identification number.
+
+Start of period step
+A start of period step occurs at the start of each period of each round of the game. It consists of:
+1. A period packet from the monitor, giving the number of the current period;
+2. A READY response from the player program when itis ready to continue play.
+PERIOD PACKET FROM MONITOR
+The period packet consists of a single message:
+PERIOD t p
+The variables have the following meanings:
+rt The number of the current round,
+
+p The number of this period: p = 1, 2, ... nperiods.
+
+Double Auction Tournament -69- Participan's Manual
+RESPONSE
+The response Messagé just consists of an acknowledgement when ready:
+READY id
+id must be your correct identification number,
+Bid-offer step
+A bid-offer Step occurs at each time in each period. It consists of three stages:
+1, A bid-offer packet from the monitor definin g the start of the step and giving the current time;
+2. After processin & 4 response from each player that Specifies a bid, an offer, or neither;
+
+3. A bid-offer result packet from the monitor that Teports on what happened during this step,
+and gives the current status.
+
+BID-OFFER PACKET
+A bid-offer packet consists of a single BIDOFF message:
+BIDOFF t nobidoff
+The variables have the followin g meanings:
+t The current time: t = 1, 2, ..., ntimes,
+nobidoff A variable saying whether a bid or offer is allowed by this player in this step:
+
+0 Bid or offer allowed,
+1 No bid or offer allowed---no tokens left.
+
+RESPONSE
+
+The response from the player must be one of the following messages:
+
+BID bid-price
+or OFFER offer-price
+or NONE 0
+
+A buyer may send a BID message to make a bid ora NONE message to do nothing. A seller may
+send an OFFER message to make an offer or a NONE message to do nothing. The message must
+be NONE if ‘nobidoff was non-zero in the BIDOFF message,
+The variables have the following meanings:
+
+bid-price The price of the bid being made. This must obey minprice <= bid-price <=
+maxprice and must be higher than the current bid price if there is one,
+
+offer-price The price of the offer being made. This must obey minprice <= offer-price <=
+maxprice and must be lower than the current offer price if there is one,
+
+Double Auction Tournament -70- Participant's Manual
+Bro ona!
+
+BID-OFFER RESULT PACKET
+
+The bid-offer result packet from the monitor reports on the disposition of this player's response
+(BID or OFFER or NONE), and on the other bids and offers made in this Step. It consists of a
+BODISP message, possibly some BID and/or OFFER Messages, and then a CBID and a COFFER
+
+message:
+
+BODISP status trades
+BID bid-price bidder
+BID bid-price bidder
+OFFER offer-price offerer
+OFFER offer-price offerer
+CBID current-bid bidder
+COFFER current-offer
+cofferer ~
+
+There is one BID message for each new bid made, and one OFFER message for each new offer
+made. Two of each are shown above, but there could be from none up to 'nbuyers' or ‘nsellers' _
+
+such messages. The B
+
+ODISP, CBID, and COFFER messages always appear.
+
+The variables have the following meanings:
+
+Status
+
+trades
+
+bid-price
+
+The disposition of the previous BID, OFFER, or NONE response. Possible
+
+values are:
+
+0 NONE message received OK. You do not have an outstanding bid or
+offer,
+
+1 NONE message received OK, Your previous bid or offer is still the
+current bid or offer,
+
+2 BID or OFFER message received OK. Your bid or offer is now the
+current bid or offer.
+
+BID or OFFER message received OK. Your bid or offer was bettered by
+another player.
+
+4 BID or OFFER message received OK. Your bid or offer was equaled by
+another player, and you lost the random tie-~break,
+
+-1 BID or OFFER message received, but unacceptable because nobidoff was
+non-zero or because the bid-price or offer-price was invalid; see the
+requirements listed in the response subsection above,
+
+-2° BID or OFFER message received, but too late. Your request was ignored
+
+and you missed one or more steps.
+
+Number of trades made so far by this player,
+
+The price of a bid that was made. ‘The BID messages are arranged in increasing
+order of bid-price, with the last one (if any) producing the current bid price,
+
+Double Auction Tournament -71- Participant's Manual
+bidder The id number of the buyer making the bid.
+
+offer-price The price of an offer that was made, The OFFER messages are arranged in
+decreasing order of offer-price, with the last one (if any) producing the current
+offer price.
+offerer . The id number of the seller making the offer.
+current-bid The current bid price, or zero if none. If there were any bids this is equal to the
+
+highest bid-price. If there were no new bids the previous value of current-bid
+(which may be 0) is retained.
+
+cbidder The id number of the buyer whose bid is the current bid, or 0 if none.
+
+current-offer The current offer price, or zero if none. If there were any offers this is equal to
+the lowest offer-price. If there were no new offers the previous value of
+current-offer (which may be 0} is retained.
+
+cofferer . The id number of the seller whose offer is the current offer, or 0 if none.
+
+Buy-sell step
+
+A buy-sell step occurs at each time in each period, after the corresponding. bid-offer step. It
+consists of three stages:
+
+1. A buy-sell packet from the monitor defining the start of the step and giving the current time;
+
+2. After processing, a response from each player specifying a buy request, 4 sell request, or
+neither;
+
+3. A buy-sell result packet from the monitor that reports on what happened during this step,
+
+and gives the current status.
+BUY-SELL PACKET
+A buy-sell packet consists of a single BUYSELL message:
+BUYSELL t nobuysell
+The variables have the following meanings:
+t The current time: t = 1, 2, .... ntimes.
+nobuysell . A variable saying whether a buy or sell request is allowed by this player in this step:
+0 Buy or sell request allowed.
+1  Nobuy or sell request allowed—no tokens left.
+2 No buy or sell request allowed—no current offer or bid.
+
+A No buy or sell request allowed—not the holder of the current bid or offer. If
+several of the codes f, 2, 4 apply they will be added together.
+
+Double Auction Tournament -72- Participant's Manual
+a
+
+cal
+
+te
+Gren.
+
+RESPONSE
+The response from the player must be one of the following messages:
+
+BUY cutrent-offer
+or SELL current-bid
+or NONE: 0 ‘
+
+A buyer may send a BUY message to request a buy, or a NONE message to do nothing. A seller
+may send a SELL message to request a sell, or a NONE message to do nothing. The message
+must be NONE if nobuysell was non-zero in the BUYSELL message.
+
+The variables have the following meanings:
+
+current-offer The current offer price, as given in the preceding COFFER message. This must
+be given correctly. .
+
+current-bid The current bid price, as given in the preceding CBID message. This must be
+: given correctly. ;
+
+BUY-SELL RESULT PACKET
+
+The buy-sell result packet from the monitor reports on the disposition of this player's response
+(BUY or SELL or NONE), and on the BUY or SELL request that was accepted, if any. Other
+players’ requests that were not accepted are not reported. It consists of a BSDISP message,
+possibly a TRADE and a PLAYERS message, and then a CBID and a COFFER message:
+
+~ BSDISP status trades
+
+TRADE type price
+TRADERS . - buyer seller
+CBID current-bid cbidder
+COFFER current-offer - cofferer
+
+Both the TRADE and TRADER messages appear if a transaction occurred; otherwise neither
+appeats. The BSDISP, CBID, and COFFER messages always appear. -
+
+The variables have the followin g meanings:
+
+status The disposition of the previous BUY, SELL, or NONE response. Possible
+values are:
+
+QO NONE message received OK.
+
+if BUY or SELL message received OK and accepted, You just made a
+trade.
+
+2 BUY or SELL message received OK, but not accepted because both the
+current bidder and the current offerer requested a buy or sell and you lost
+_ the random 50--50 toss.
+
+3 BUY or SELL message received OK, but not accepted because another
+
+buyer or seller (the same type as you) also made a valid request, and won
+the random tie-break,
+
+Double Auction Tournament -73- Participant's Manual
+trades
+
+type
+
+price
+
+buyer
+seller
+
+current-bid
+
+cbidder
+
+current-offer
+
+cofferer
+
+-1. BUY or SELL message received, but unacceptable because nobuysell was
+non-zero, or because the current-bid or current-offer specified did not
+match the actual current bid or offer price.
+
+-2 BUY or SELL message received, but too late. Your request was ignored
+and you missed one or more steps. Note that you may have made a trade
+even if ‘status’ is not 1, because another player may have accepted your
+current bid or offer. Check whether ‘buyer’ or ‘seller’ (as appropriate) is
+equal to your ‘id’ to know for sure.
+
+Number of trades made so far by this player.
+
+A code specifying which type of transaction occurred:
+
+1 A BUY request was accepted.
+
+2 A SELL request was accepted.
+
+The price of the transaction that occurred. This will be equal to the previous
+
+current offer price if ‘type’ = 1, or to the previous current bid price if 'type' =
+
+2.
+
+The identification number of the buyer involved in the transaction.
+
+The identification number of the seller involved in the transaction.
+
+The current bid price, or 0 if none. This will definitely be 0 if there was a
+TRADE message. Otherwise it will be non-zero if it was previously non-zero.
+
+The id number of the buyer whose bid is the current bid, or 0 if none.
+
+The current offer price, or 0 if none, This will definitely be 0 if there was a
+TRADE message. Otherwise it will be non-zero if it was previously non-zero.
+
+‘The id number of the seller whose. offer is the current offer, or 0 if none.
+
+End of game step
+
+The end of gam
+END
+
+¢ step consists of a single message from the monitor to each player:
+
+profit efficiency
+
+The variables have the following meanings:
+
+profit The total profit made by the player in this game. Values larger than 9999 or smaller
+than -999 are reported as 9999 and -999, respectively.
+
+efficiency The ratio of ‘profit’ to the profit predicted by economic theory, times 100. This is a
+measure of how well the player performed, with 100 being "average" and higher
+values being better.
+
+The player program should terminate itself upon receiving this message.
+
+Double Auction Tournament -74- Participant's Manual
+8.4 Special Messages
+QUIT messages
+
+At any stage where an ordinary message is expected, the player program may send the monitor the
+message:
+
+QUIT type
+
+The monitor will then drop that player from the game. ‘type’ should be zero for an intentional
+abandonment of the game (normally used only for a human player), or non-zero if an unexpected
+fatal error occurred in the player program. The monitor will report "quit" for the first case, and
+"fatal error" for the second. The player program itself should print an appropriate error message
+(to stderr if UNEX).
+
+KILLED messages
+The monitor (or DANI) may at any time send a player the message:
+KILLED. reason. 0
+
+The player program should print an error message. (to stderr if UNIX) if desired and then exit
+immediately. The reason parameter is a code saying why the monitor killed the player:
+
+Killed by the operator running the monitor.
+
+The player was not responding at the end of a period. A temporary lack of response is
+allowed within a period (and gives status = -2}, but is fatal at the end of a period.
+The player sent a message with a message type that was either illegal in the current context,
+or entirely unknown (notin Appendix C).
+
+The player sent an undecodable message (not 2 inte gers).
+
+The monitor couldn't find or couldn't read the .out message file which should have been
+written by the player (file-based communication only).
+
+The monitor couldn't read a message from the player because of an /O failure (pipe-based
+or inet-based communication only).
+
+The monitor encountered an error, probably because the game wasn 't properly defined.
+The game was abandoned, probably because there weren't enough players.
+
+Killed by DANI due to a communications problem or inconsistency,
+
+10. Another reason—reserved for possible future use.
+
+No error—silent kill; used by DANI if there isn't actually a game in progress.
+
+OvVwoc~ad DA WR WwW NR
+
+TEST messages
+
+TEST messages are used by the monitor or by DANI to check that a player is functioning properly.
+At any time the monitor or dani may send the message:
+
+TEST k 4)
+and the player should respond with:
+TEST k
+
+The variable k is an arbitrary integer, which must be echoed correctly in the player's reply.
+
+Double Auction Tournament -75- Participant's Manual
+Pre-game messages
+
+In the networked version of the game, in which the monitor and player programs may be on
+different machines, there are some initial pre-game messages exchanged before the main game
+begins. They apply equally whether the player is actually an interface to a human player, or is a
+machine player. Fhey are as follows:
+
+1. FROM PLAYER TO MONITOR
+
+The player program must initiate the dialogue with:
+
+DA role type userid
+name
+
+Note that ‘DA‘ means the literal upper-case characters DA, not a numeric code.
+
+tole Specifies the roles that the player is willing to play: 1 for a buyer, 2 for a seller, 3
+for either, 0 for inquiry only.
+
+type Specifies the type of player: 1 for a human player directly connected, 2 for a
+machine player directly connected, 3 for any player connected via DANI.
+
+userid The program's userid on the player's local machine. Up to 8 characters.
+
+name The player's or player program's name, up to 30 characters before the newline.
+
+2, FROM MONITOR TO PLAYER
+
+The monitor responds with one or more textual messages, which should normally be printed or
+displayed by the player, followed by one of the following: either by
+
+Start
+nogame
+abort
+
+‘start’ signifies that the main game (starting with the initialization-1 packet) is about to begin.
+‘nogame' indicates that there is no current game in which to participate. ‘abort' signifies that,
+although a game was expected to begin, either the whole game has been aborted or the player is not
+eligible to play in it. The reason for an 'abort' message will be given in the preceding textual
+messages. The player program should exit after receiving a ‘nogame’ or ‘abort’ message.
+
+8.5 Summary
+
+This summarizes the messages passed in a game, in order, Indented messages are from the player
+programs to the monitor, ;
+
+TYPE protocol monitor
+GAME game-type game-id
+LENGTH nrounds 0
+
+LENGTH _nperiods ntimes
+TOKENS max-tokens 0
+NUMBER  wiax-buyers max-sellers
+ROLE role timeout
+
+Double Auction Tournament -76- Participant's Manual
+! ACCEPT player-number
+4 or REFUSE reason
+
+a . NUMBER  nbuyers - nsellers
+
+BUYERS number-1 nurber-2 (Note 1)
+SELLERS number-1 number-2 (Note 1)
+LIMITS minprice maxprice
+
+I PLAYER id 0
+, “READY id
+3 A ROUND T ntokens
+4 PRICES price-1 price-2 (Note 2)
+4 READY id
+2 B: PERIOD r p
+~ C:  BIDOFF 1 nobidoff
+4 BID bid-price
+“ or OFFER offer-price
+9 or NONE 0
+3S BODISP _status- trades -
+BID | bid-price bidder (Note 3)
+ae OFFER offer-price offerer (Note 3)
+af CBID current-bid  cbidder
+. COFFER current-offer cofferer
+a BUYSELL nobuysell
+BUY current-offer
+8 or SELL current-bid
+ad or NONE 0
+af BSDISP status trades
+“4 TRADE type price {Note 4)
+me TRADERS buyer seller (Note 4)
+. CBID current-bid — cbidder
+. COFFER current-offer cofferer
+Go to A, B, C, or D,
+3 D; END profit efficiency
+Notes:
+as 1. Enough of these messages appear to give a number for each buyer and each seller.
+2. Enough of these messages appear to give 'ntokens' price values.
+3. Zero or more of each of these messages appear.
+4, Neither or both of these messages appear.
+Double Auction Tournament -T7- Participant's Manual
+
+8.6 Code Table
+
+This table assigns numerical values to each of the keywords mentioned in the text. The
+alphabetical order used is purely arbitrary, and may not be maintained in the future if further
+keywords are added. The values listed here will not be changed.
+
+ACCEPT 1
+BID 2
+
+- BIDOFR 3
+BODISP 4
+BSDISP 5
+BUY 6
+BUYERS 9
+
+- BUYSELL 7
+CBID 8
+COFFER 9
+END 10
+GAME 11
+KILLED 98
+LENGTH 12
+LIMITS 13
+NONE i4
+NUMBER iS
+OFFER 16
+PERIOD 17
+PLAYER 18
+PRICES 19
+QUIT 99
+READY 20
+REFUSE 21
+ROUND 27
+ROLE 22
+SELL 23
+SELLERS 30
+TEST 31
+TOKENS 28
+TRADE 24
+TRADERS 25
+TYPE 26
+
+Double Auction Tournament -78- Participant's Manual
+CHAPTER 9: REFERENCES
+
+9.1 References
+
+This list provides some bibliography for those interested in pursuing further the previous work on
+Double Auctions and related topics. See reference by Rust, Palmer and Miller (available as Santa
+Fe Institute working paper, hardcopy but no Email version) for a basic overview of Double
+Auctions, existing analysis of strategies in Double Auctions, and basic motivation for the Double
+Auction tournament.
+
+Axelrod, R. (1984) The Evolution of Cooperation (Basic Books; New York).
+
+Easley, D, and Ledyard, J. (1986) "Theories of Price Formation and Exchange in Double Oral
+Auctions" Social Science Working Paper 611, California Institute of Technolo ey,
+
+Dorsey, R.E. (1988) "Estimation and Simulation of the Double Auction” discussion paper for the
+ESA meeting, Department of Economics, University of Arizona.
+
+Plott, C.R. (1982) "Industrial Organization Theory and Experimental Economics" Journal of
+Economic Literature 20, 1485-1527.
+
+Plott, C.R. (1989) "An Updated Review of Industrial Organization Applications of Experimental
+Methods," California Institute of Technology.
+
+Rust, J., Palmer, R.G., and Miller, J.H. {1989} "A Double Auction Market for Computerized
+Traders" Santa Fe Institute Working Paper,
+
+Smith, V.L. (1962) "An Experimental Study of Competitive Market Behavior" Journal of Political
+Economy 70, 111-137.
+
+Smith, V.L. (1976) "Bidding and Auctioning Institutions: Experimental Results" in Bidding and
+Auctioning for Procurement and Allocation, ed. Y. Amihud, 43-64 (New York, New York
+University Press)
+
+Smith, V. L..(1982a) "Microeconomic Systems as an Experimental Science" American Economic -
+Review 54, 923-955, . ,
+
+Smith, V.L, (1982b) "Competitive Market Institutions: Double Auctions vs. Sealed Bid-Offer
+Auctions" American Economic Review 72, 58-77,
+
+Smith, V.L., Suchanek, G.L., and Williams, A.L. (1989) "Bubbles, Crashes and Endogenous
+Expectations in Experimental Spot Asset Markets" Econometrica.
+
+Waldspurger, C.A., Hogg, T., Huberman, B.A., Kephart, J.0., and Stornetta, S. (1989)
+"SPAWN; A Distributed Computational Economy" Xerox System Science Laboratory preprint
+P89-00025, Palo Alto,
+
+Wilson, R. (1984) "On Equilibria of Bid-Ask Markets" Technical Report 452, Stanford
+University.
+
+Wilson, R, (1985) "Efficient Trading" in fssues in Contemporary Economics and Welfare, ed. G.
+Feiwell, 169-208 (State University of New York Press, Albany, New York).
+
+Double Auction Tournament -79- Participant's Manual
+
